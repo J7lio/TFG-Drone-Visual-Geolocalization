@@ -1,0 +1,181 @@
+% ---------------------------------------------------------------------
+% Geolocalización visual
+% ---------------------------------------------------------------------
+
+\chapter{Pipeline de geolocalización visual}
+\label{cap:geolocalizacion-visual}
+
+\begin{Resumen}
+Este capítulo describe el flujo de procesamiento utilizado para estimar la localización del dron a partir de imágenes: generación del mapa base, normalización de los fotogramas de vuelo, recuperación global de candidatos con un descriptor visual, verificación geométrica local y cálculo del error de localización frente a la referencia GNSS. Se documenta también qué alternativas se probaron y se descartaron en cada etapa, y por qué.
+\end{Resumen}
+
+\section{Planteamiento del problema}
+\label{sec:planteamiento-cvgl}
+
+El objetivo del pipeline es estimar la posición de una imagen capturada por el dron sin utilizar directamente su coordenada GNSS como entrada. La telemetría GNSS se conserva como referencia de evaluación, no como entrada del algoritmo. La imagen de consulta se compara con una base de datos de parches satelitales georreferenciados. Si el parche correcto se identifica y la geometría entre ambas imágenes es consistente, se puede proyectar el centro de la imagen del dron sobre el mapa y obtener una coordenada estimada.
+
+El pipeline final se compone de las siguientes etapas, en orden: (1) generación del mapa base georreferenciado y de una galería de parches; (2) normalización de cada fotograma de vuelo (rotación a norte y ajuste de escala por altitud); (3) recuperación global de un conjunto reducido de parches candidatos mediante un descriptor visual compacto; (4) verificación geométrica local de cada candidato con emparejamiento de puntos y estimación robusta de homografía; (5) corrección del punto de verdad-terreno por la actitud del dron; y (6) cálculo del error final mediante la fórmula de Haversine. La \autoref{fig:pipeline-cvgl} resume este flujo.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{pipeline_cvgl.png}
+\caption{Flujo general de geolocalización visual cruzada del pipeline final.}
+\label{fig:pipeline-cvgl}
+\end{figure}
+
+\section{Generación del mapa base}
+\label{sec:generacion-mapa-base}
+
+El primer paso consiste en generar un mosaico satelital georreferenciado de la zona de vuelo. El script \texttt{01\_download\_basemap.py} descarga un área alrededor de unas coordenadas centrales (imágenes ESRI World Imagery) y la guarda como un archivo GeoTIFF en el sistema de referencia Web Mercator (EPSG:3857). Este archivo conserva la transformación entre píxeles y coordenadas proyectadas, lo que permite relacionar cada punto de la imagen con una posición geográfica.
+
+Dos parámetros de esta descarga son configurables: el \textbf{radio} del área descargada alrededor del centro y el \textbf{nivel de zoom} (resolución de las teselas). Ambos se evaluaron empíricamente en vez de fijarse por criterio, comparando precisión de localización y tiempo de preparación sobre un subconjunto de 15 fotogramas de prueba y cuatro radios (500, 1500, 3000 y 5000 m) a zoom fijo, y tres niveles de zoom (17, 18 y 19) a radio fijo:
+
+\begin{itemize}
+\item El radio apenas afecta a la precisión (mediana de error entre 5,5 y 6,1 m en todo el rango probado), pero el coste de preparación (descarga y cálculo de descriptores de la galería) crece de forma muy rápida con el área: de unos 40 s a radio 500 m a más de 80 minutos a radio 5000 m (\autoref{fig:tiempos-setup-radio-zoom}). Se mantiene un radio de 1500 m, un compromiso razonable para el área de vuelo de las pruebas.
+\item El nivel de zoom 18 (el adoptado) obtiene la mejor mediana de error; el zoom 17 (menor resolución) produjo dos fallos catastróficos de más de 800 m en el mismo conjunto de prueba —casos en los que el emparejamiento local no encontró suficientes puntos fiables—, mientras que el zoom 19 no mejora la precisión pero duplica el tiempo por consulta y multiplica por 15 el tiempo de descarga.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{tiempos_setup_radio_zoom.png}
+\caption{Tiempo de obtención del mosaico, tiling de la galería y cálculo de embeddings, para las seis configuraciones de radio/zoom evaluadas (escala logarítmica).}
+\label{fig:tiempos-setup-radio-zoom}
+\end{figure}
+
+\section{Normalización de los fotogramas de vuelo}
+\label{sec:normalizacion-frames}
+
+Antes de comparar un fotograma del dron con la galería satelital es necesario corregir dos desajustes que, de no tratarse, degradan gravemente el emparejamiento:
+
+\begin{description}
+\item[Rotación a norte.] El mosaico satelital está orientado con el norte geográfico hacia arriba, pero el fotograma del dron está orientado según el rumbo de vuelo en el instante de captura. El script \texttt{10\_preparar\_queries\_vuelo\_completo.py} rota cada fotograma según el campo \texttt{Rumbo\_Norte} de la telemetría para que \enquote{arriba} apunte siempre al norte, igual que la galería. Sin esta corrección, el número de \textit{inliers} geométricos encontrados por LoFTR cae de cientos (en fotogramas ya alineados a norte) a menos de una decena en fotogramas girados 90--180° respecto al norte, es decir, se pierde el emparejamiento casi por completo salvo cuando el rumbo del dron coincide por casualidad con el norte.
+\item[Normalización de altitud.] Tanto el descriptor global como el emparejador local redimensionan internamente la imagen a un tamaño de entrada fijo, con independencia del tamaño real de entrada. Si un fotograma se capturó a más altitud que la altitud de referencia usada para dimensionar los parches de la galería, cubre más terreno real que dichos parches, y el mismo objeto del mundo real aparece a una escala de píxeles distinta en la consulta que en el parche. El mismo script corrige esto recortando al centro la fracción de la imagen que cubriría la altitud de referencia (80 m en este proyecto), en vez de reescalar la imagen completa, ya que el redimensionado final es fijo de todas formas.
+\end{description}
+
+\section{Construcción de la galería satelital}
+\label{sec:construccion-galeria}
+
+El script \texttt{02\_tile\_basemap\_gallery.py} divide el mapa base en parches con solapamiento del 30\,\%. Cada parche se guarda como imagen PNG y se registra en un CSV con su coordenada central y su posición dentro del mosaico original. El tamaño de los parches se calcula a partir de una estimación de la huella de la cámara en el suelo.
+
+La anchura aproximada de terreno observada por una cámara nadiral puede estimarse mediante:
+
+\begin{equation}
+W = 2h \tan\left(\frac{\theta}{2}\right)
+\label{eq:huella-camara}
+\end{equation}
+
+\noindent donde $W$ es la anchura de la huella en metros, $h$ es la altura relativa de vuelo y $\theta$ es el campo de visión horizontal (HFOV) efectivo de la cámara. Este HFOV efectivo (\ang{121} en la configuración final, para el sensor AR0234 en modo 1920$\times$1200) no es el nominal de la lente, sino un valor calibrado empíricamente: se midió sobre imágenes reales la anchura de terreno cubierta a dos alturas de vuelo muy distintas (80 m y 120 m) y se comprobó que ambas mediciones eran consistentes entre sí con la \autoref{eq:huella-camara}. Esta huella, además, se calcula en metros reales de terreno y debe convertirse a \enquote{metros proyectados} del mosaico Web Mercator multiplicando por el factor de escala local $\sec(\mathrm{lat})$, ya que dicha proyección solo preserva distancias reales en el ecuador; omitir este factor infraestima el tamaño de parche necesario a las latitudes de este proyecto (unos 38--39° N).
+
+\section{Recuperación global}
+\label{sec:recuperacion-global}
+
+La recuperación global busca rápidamente los parches satelitales más parecidos a la imagen del dron, para reducir el problema de \enquote{buscar en toda la galería} a \enquote{verificar geométricamente un puñado de candidatos}. Para ello se calcula un descriptor visual compacto de cada parche de la galería (una sola vez, cacheado) y de cada consulta, y se ordenan los parches por similitud coseno.
+
+\subsection{Configuración final: VLAD + DINOv3-SAT}
+\label{sec:recuperacion-global-final}
+
+La configuración inicialmente prevista, siguiendo el enfoque más simple de AnyLoc \parencite{keetha2023anyloc}, era un descriptor DINOv2 con agregación GeM (\textit{Generalized Mean pooling}). Evaluada sobre las 76 consultas del vuelo de validación, esta configuración obtenía una posición mediana del parche correcto en el puesto 13 del ranking global y una tasa de acierto en primera posición (\textit{top-1}) del 0\,\%: la fase de recuperación global casi nunca encontraba el parche correcto como mejor candidato.
+
+En vez de dar por buena esta configuración, se compararon empíricamente 2 esquemas de agregación (GeM y VLAD) por 3 backbones (DINOv2, DINOv3-vitb16 preentrenado en imágenes web genéricas, y DINOv3-vitl16 preentrenado específicamente en imágenes de satélite, variante SAT-493M), es decir, 6 combinaciones sobre las mismas 76 consultas y la misma galería. La \autoref{fig:comparacion-retrieval} resume el resultado.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{comparacion_retrieval_metodos.png}
+\caption{Comparación de las 6 combinaciones de agregación (GeM/VLAD) y backbone (DINOv2/DINOv3-LVD/DINOv3-SAT) evaluadas para la recuperación global.}
+\label{fig:comparacion-retrieval}
+\end{figure}
+
+La combinación ganadora, VLAD con DINOv3-vitl16 (variante SAT-493M), obtiene una posición mediana del parche correcto de 1 (top-1 = 89,5\,\%, top-5 = 98,7\,\%, top-10 = 100\,\%). Dos factores explican esta mejora:
+
+\begin{itemize}
+\item \textbf{VLAD frente a GeM}: VLAD (\textit{Vector of Locally Aggregated Descriptors}) ajusta un vocabulario visual mediante \textit{k-means} sobre los propios parches de la galería y agrega los tokens de cada imagen como residuos respecto a ese vocabulario \parencite{arandjelovic2016netvlad}, en vez de promediar directamente los tokens como hace GeM. Esto preserva más información local sobre qué elementos visuales aparecen en la imagen, en vez de reducirlos a un único promedio global.
+\item \textbf{DINOv3-SAT frente a DINOv2}: la variante SAT-493M de DINOv3 está preentrenada específicamente sobre imágenes de satélite \parencite{simeoni2025dinov3}. Aunque el dominio \enquote{vista de dron} no está cubierto por ese preentrenamiento, la galería contra la que se compara es, precisamente, satelital, por lo que comparte mucha más estructura visual con el backbone que un modelo entrenado sobre fotografía web genérica.
+\end{itemize}
+
+Con esta mejora en la calidad del ranking, la mayoría de consultas resuelven correctamente con un único candidato, lo que permite aplicar una parada temprana (\textit{early-exit}) en la fase de emparejamiento local: en cuanto un candidato supera un umbral de correspondencias geométricamente consistentes, se descarta el resto del top-k sin evaluarlo. Esta optimización, combinada con precisión de cálculo reducida (FP16) y un tamaño de imagen de entrada más pequeño para LoFTR, se describe con sus tiempos en la \autoref{sec:emparejamiento-local}.
+
+\section{Emparejamiento local y estimación geométrica}
+\label{sec:emparejamiento-local}
+
+La fase local compara la imagen del dron con cada candidato del top-k utilizando LoFTR (\textit{Local Feature TRansformer}) \parencite{sun2021loftr}, un emparejador \textbf{sin detector} de puntos de interés: en vez de extraer primero un conjunto reducido de puntos clave y describirlos por separado (como SIFT u ORB), LoFTR predice directamente correspondencias densas entre las dos imágenes mediante un transformador con atención cruzada. Se eligió este enfoque frente a los detectores clásicos porque las escenas de este proyecto (terreno agrícola/forestal, visto desde ángulos y alturas muy distintos entre dron y satélite) presentan zonas de textura repetitiva o baja, donde los detectores de esquinas clásicos tienden a fallar o a producir puntos poco distintivos.
+
+Las correspondencias que produce LoFTR se filtran primero por confianza y después se ajusta una homografía robusta con MAGSAC++ \parencite{barath2020magsac++}, una variante de RANSAC que no necesita fijar a mano un único umbral de error para clasificar una correspondencia como \textit{inlier}, sino que marginaliza sobre un rango de umbrales, lo que la hace más estable cuando la proporción de correspondencias erróneas varía mucho de una imagen a otra (como ocurre al comparar candidatos de calidad muy distinta dentro del top-k). El candidato con mayor número de \textit{inliers} se considera la mejor hipótesis de localización, y su homografía se usa para proyectar el centro de la imagen del dron sobre el mosaico satelital. A partir del píxel proyectado se obtiene una coordenada geográfica con las utilidades de conversión de \texttt{geo\_utils.py}. El script \texttt{11\_ejecutar\_vuelo\_completo.py} implementa esta etapa sobre el pipeline completo.
+
+\subsection{Optimización del tiempo de emparejamiento}
+\label{sec:optimizacion-loftr}
+
+LoFTR es la etapa más costosa del pipeline por candidato evaluado, por lo que se aplicaron tres optimizaciones, validadas empíricamente comparando tiempo y precisión antes/después de cada una:
+
+\begin{itemize}
+\item \textbf{Early-exit}: se detiene la evaluación de candidatos del top-k en cuanto uno supera un umbral de \textit{inliers} (100), en vez de evaluar siempre los 20 candidatos. Gracias a la buena calidad del ranking (\autoref{sec:recuperacion-global-final}), la mayoría de consultas resuelven con un único candidato evaluado.
+\item \textbf{Precisión FP16}: LoFTR se ejecuta en punto flotante de 16 bits en GPU en vez de 32 bits, reduciendo tiempo de cálculo y memoria sin pérdida apreciable de precisión de localización.
+\item \textbf{Tamaño de imagen reducido} (\texttt{MAX\_SIDE=384} en vez de 640): las imágenes de entrada a LoFTR se redimensionan a un lado máximo menor antes del emparejamiento.
+\end{itemize}
+
+Sobre las 76 consultas del vuelo de validación, la combinación de las tres optimizaciones reduce el tiempo medio por consulta a unos 0,3--0,4 s (frente a varios segundos sin optimizar), de los cuales aproximadamente dos tercios corresponden a la extracción del descriptor global VLAD+DINOv3-SAT y un tercio al emparejamiento LoFTR (\autoref{fig:tiempo-desglose}) — es decir, en la configuración final el cuello de botella ya no es LoFTR, sino la extracción del descriptor de recuperación global.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{tiempo_desglose.png}
+\caption{Desglose del tiempo por consulta entre recuperación global (VLAD+DINOv3-SAT) y emparejamiento local (LoFTR+MAGSAC++), a lo largo de las 76 consultas del vuelo de validación.}
+\label{fig:tiempo-desglose}
+\end{figure}
+
+Se evaluaron además dos alternativas que \textbf{no} se adoptaron en la versión final, a pesar de probarse con el mismo rigor que las anteriores: procesar varios pares candidato-consulta en el mismo lote de LoFTR (\textit{batching}), que ofrecía una mejora de tiempo modesta a cambio de mayor riesgo de agotar memoria de GPU; y EfficientLoFTR, una variante más ligera de LoFTR que en la práctica no superó al LoFTR ya optimizado con las tres técnicas anteriores.
+
+\section{Corrección del punto de verdad-terreno}
+\label{sec:correccion-nadir}
+
+La telemetría GNSS registra la posición de la antena/IMU del dron, no la del punto de terreno que realmente fotografía el centro de la cámara. Con \textit{pitch} y \textit{roll} nulos ambos puntos coinciden, pero en vuelo real el dron cabecea y alabea para acelerar y girar, y como la cámara está montada rígidamente al cuerpo (sin estabilización por \textit{gimbal}), su eje óptico se inclina junto con el cuerpo del dron. El punto de terreno que realmente ve el centro de la imagen se desplaza respecto a la posición GNSS en la misma dirección y magnitud que esa inclinación.
+
+Este desplazamiento en el plano del terreno, en componentes norte/este, se calcula a partir del \textit{pitch} ($\theta$), \textit{roll} ($\phi$), rumbo ($\psi$) y altura relativa ($h$) del dron en el instante de captura, aplicando la composición de rotaciones del cuerpo del dron a un vector que apunta hacia abajo en el sistema del cuerpo, y proyectando su intersección con el plano del terreno:
+
+\begin{equation}
+\begin{aligned}
+N &= h \cdot \frac{\cos\psi \sin\theta \cos\phi + \sin\psi \sin\phi}{\cos\theta \cos\phi} \\
+E &= h \cdot \frac{\sin\psi \sin\theta \cos\phi - \cos\psi \sin\phi}{\cos\theta \cos\phi}
+\end{aligned}
+\label{eq:nadir-offset}
+\end{equation}
+
+\noindent donde $N$ y $E$ son los desplazamientos en metros hacia el norte y el este que hay que sumar a la posición GNSS para obtener el punto de terreno real que mira el centro de la imagen. El signo de esta corrección se verificó empíricamente barriendo ambos signos posibles y comprobando cuál reducía el error de localización medido, no derivándolo a mano por ser propenso a errores de convenio de signos.
+
+Aplicar esta corrección al punto de referencia usado para medir el error (en vez de comparar directamente contra la posición GNSS cruda) reduce el error medio de localización de 12,3 m a 6,2 m sobre las 76 consultas del vuelo de validación (\autoref{sec:resultados-recuperacion-global}): gran parte de lo que a primera vista parecía \enquote{error de matching} del pipeline visual no era un fallo de la recuperación o el emparejamiento, sino que se estaba comparando contra el punto de referencia equivocado.
+
+\section{Cálculo del error}
+\label{sec:calculo-error}
+
+El error de localización se calcula comparando la coordenada estimada por visión con la coordenada de referencia (GNSS corregida por la \autoref{eq:nadir-offset}) registrada en el instante de captura, mediante la fórmula de Haversine. Esta fórmula da la distancia de gran círculo entre dos puntos de una esfera a partir de su latitud y longitud, y es la habitual para medir distancias entre coordenadas WGS84 a escala local (donde la curvatura terrestre es prácticamente despreciable pero conviene no asumir directamente una proyección plana):
+
+\begin{equation}
+d = 2R \arcsin\left(\sqrt{\sin^2\left(\frac{\Delta\varphi}{2}\right) + \cos\varphi_1 \cos\varphi_2 \sin^2\left(\frac{\Delta\lambda}{2}\right)}\right)
+\label{eq:haversine}
+\end{equation}
+
+\noindent donde $\varphi_1,\varphi_2$ son las latitudes de ambos puntos, $\Delta\varphi = \varphi_2-\varphi_1$, $\Delta\lambda$ es la diferencia de longitud, y $R \approx \SI{6371}{\kilo\metre}$ es el radio medio de la Tierra. Esta métrica se calcula para cada fotograma evaluado y permite tanto reportar un error agregado (mediana, media) como analizar su distribución completa y sus casos atípicos (\autoref{sec:resultados-recuperacion-global}).
+
+\section{Diagnóstico visual}
+\label{sec:diagnostico-visual}
+
+El script \texttt{05\_visualize\_matches.py} genera imágenes de diagnóstico para inspeccionar visualmente el comportamiento del pipeline. Una imagen muestra las correspondencias entre el fotograma del dron y el parche satelital seleccionado, diferenciando en verde los \textit{inliers} que sobrevivieron a MAGSAC++ y en rojo los descartados como \textit{outliers} (\autoref{fig:diagnostico-matches}). Otra imagen sitúa la posición GNSS real y la posición estimada sobre un recorte del mapa base, con la distancia entre ambas (\autoref{fig:diagnostico-localizacion}). Estos diagnósticos son útiles para detectar fallos de recuperación, errores de orientación, baja textura o problemas de escala que un número agregado de error no deja ver.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{matches_ejemplo.png}
+\caption{Correspondencias entre un fotograma del dron (izquierda) y el parche satelital ganador (derecha): 1199 \textit{inliers} verdes tras MAGSAC++, frente a 385 \textit{outliers} rojos descartados (el script de diagnóstico dibuja como máximo 150 líneas de \textit{inliers} y 75 de \textit{outliers}, muestreadas al azar, para no saturar visualmente la imagen; los recuentos indicados sí son el total real). Error de localización de este fotograma: 3,6 m.}
+\label{fig:diagnostico-matches}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{location_ejemplo.png}
+\caption{Comparación entre la posición GNSS real (azul) y la posición estimada por el pipeline (rojo) sobre el mosaico satelital, para el mismo fotograma de la \autoref{fig:diagnostico-matches}.}
+\label{fig:diagnostico-localizacion}
+\end{figure}
+
+\section{Diagnóstico del ranking}
+\label{sec:diagnostico-ranking}
+
+El script \texttt{06\_diagnose\_retrieval\_rank.py} (en la carpeta de experimentación \texttt{pruebas/}) comprueba en qué posición del ranking global aparece el parche geográficamente correcto, utilizando la coordenada GNSS como referencia. Esta comprobación permite diferenciar dos tipos de fallo: que el parche correcto no entre en el top-k de recuperación global (fallo de recuperación), o que entre en el top-k pero la verificación local no consiga una homografía fiable (fallo de emparejamiento). Este mismo script, ejecutado sobre las 6 combinaciones de agregación/backbone, es el que produjo la comparación de la \autoref{fig:comparacion-retrieval}.
+
+% ---------------------------------------------------------------------

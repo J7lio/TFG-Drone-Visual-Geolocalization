@@ -1,0 +1,74 @@
+% ---------------------------------------------------------------------
+% Objetivos y competencias
+% ---------------------------------------------------------------------
+
+\chapter{Objetivos y competencias}
+\label{cap:objetivos-competencias}
+
+\begin{Resumen}
+En este capítulo se definen el objetivo general, los objetivos específicos y la relación del trabajo con las competencias de la titulación. También se delimitan las restricciones técnicas que condicionan el desarrollo del sistema.
+\end{Resumen}
+
+\section{Objetivo general}
+\label{sec:objetivo-general}
+
+El objetivo general del Trabajo de Fin de Grado es diseñar, ensamblar e integrar un dron personalizado que sirva como banco de pruebas para navegación autónoma basada en visión, permitiendo capturar imágenes y telemetría en vuelo real y evaluar posteriormente un algoritmo de Geolocalización Visual Cruzada.
+
+\section{Objetivos específicos}
+\label{sec:objetivos-especificos}
+
+Para alcanzar el objetivo general se plantean los siguientes objetivos específicos:
+
+\begin{enumerate}
+\item Seleccionar e integrar los componentes mecánicos, eléctricos y electrónicos necesarios para construir una plataforma aérea funcional.
+\item Configurar el controlador de vuelo, el módulo GPS con brújula y los parámetros básicos de seguridad y estabilidad.
+\item Integrar una Raspberry Pi con una cámara USB de obturador global para capturar imágenes durante el vuelo.
+\item Establecer un enlace de telemetría basado en MAVLink que permita registrar actitud, rumbo, altitud y posición durante la misión.
+\item Preparar un flujo de trabajo para ejecutar misiones mediante estación de tierra y mantener acceso remoto mediante Tailscale y sesiones persistentes con \texttt{tmux}.
+\item Construir una base de datos georreferenciada a partir de imágenes satelitales de la zona de vuelo.
+\item Evaluar un pipeline de CVGL basado en recuperación global y emparejamiento local sobre las imágenes reales capturadas.
+\item Analizar las limitaciones de ejecutar el procesamiento visual a bordo y proponer mejoras futuras para acercar el sistema al tiempo real.
+\end{enumerate}
+
+\section{Restricciones de diseño}
+\label{sec:restricciones-diseno}
+
+El diseño del sistema está condicionado por las restricciones propias de una plataforma aérea ligera. Las más relevantes son:
+
+\begin{itemize}
+\item \textbf{Peso}: todos los elementos embarcados reducen la autonomía y afectan a la estabilidad del dron.
+\item \textbf{Energía}: la batería principal debe alimentar el sistema de propulsión y, mediante reguladores adecuados, la electrónica auxiliar.
+\item \textbf{Cómputo}: la Raspberry Pi permite captura y comunicaciones, pero tiene capacidad limitada para ejecutar modelos de visión pesados.
+\item \textbf{Vibraciones}: la cámara y la electrónica deben montarse minimizando vibraciones para no degradar la calidad de imagen.
+\item \textbf{Comunicaciones}: el enlace remoto debe ser robusto frente a desconexiones puntuales durante la misión.
+\item \textbf{Seguridad}: las pruebas deben realizarse de forma incremental, validando primero el sistema en tierra y después en vuelos controlados.
+\end{itemize}
+
+\section{Competencias relacionadas}
+\label{sec:competencias-relacionadas}
+
+El trabajo se relaciona directamente con varias competencias de la titulación. La \autoref{tab:competencias} resume la contribución prevista de cada una.
+
+\begin{table}[htbp]
+\centering
+\caption{Relación entre competencias y actividades del proyecto.}
+\label{tab:competencias}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{0.15\textwidth}X}
+\toprule
+Competencia & Aplicación en el TFG \\
+\midrule
+CE10 & Integración de una computadora de borde, cámara, telemetría y controlador de vuelo en un sistema empotrado embarcado. \\
+CE14 & Uso de imágenes capturadas por una cámara para estimar localización y evaluar correspondencias visuales con mapas de referencia. \\
+CE26 & Aplicación de descriptores visuales y técnicas de aprendizaje automático para reconocimiento visual de lugares. \\
+CE34 & Estudio de técnicas de estimación de localización y soporte a la navegación de un robot móvil aéreo. \\
+CE42 & Uso de herramientas y sistemas específicos de robótica, estaciones de tierra y protocolos de comunicación para integrar dispositivos externos. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Criterios de éxito}
+\label{sec:criterios-exito}
+
+Se considerará que la integración básica del sistema es satisfactoria si el dron puede realizar vuelos controlados, capturar imágenes con marcas temporales, registrar telemetría asociada y generar un conjunto de datos utilizable por el pipeline de CVGL. En una segunda fase, el sistema se evaluará mediante métricas de error de localización, número de correspondencias geométricamente válidas y tiempo de procesamiento por imagen.
+
+% ---------------------------------------------------------------------

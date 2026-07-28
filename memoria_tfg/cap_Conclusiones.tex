@@ -1,0 +1,50 @@
+% ---------------------------------------------------------------------
+% Conclusiones
+% ---------------------------------------------------------------------
+
+\chapter{Conclusiones y trabajos futuros}
+\label{cap:conclusiones}
+
+\begin{Resumen}
+Este capítulo recoge las conclusiones del trabajo a la luz de los resultados experimentales obtenidos sobre el vuelo de validación (\autoref{cap:experimentos-resultados}): un error de localización mediano de \SI{6.1}{\metre} sobre 76 consultas reales, sin ningún fallo de emparejamiento. Se resumen las aportaciones del trabajo y las líneas de mejora más relevantes identificadas durante el desarrollo.
+\end{Resumen}
+
+\section{Conclusiones}
+\label{sec:conclusiones-provisionales}
+
+El proyecto aborda la integración completa de una plataforma aérea personalizada para estudiar navegación basada en visión, y a diferencia de un enfoque puramente algorítmico sobre \textit{datasets} externos, obliga a resolver las restricciones reales de un sistema robótico embarcado: desde la reprogramación de la placa de vuelo tras perder su \textit{firmware} hasta la pérdida de señal GPS por proximidad a otros componentes (\autoref{sec:problemas-hardware}).
+
+La arquitectura planteada separa correctamente las funciones críticas de vuelo de las tareas de percepción y registro. El controlador de vuelo se encarga de la estabilización y la misión, mientras que la Raspberry Pi captura imágenes, registra telemetría y mantiene comunicaciones mediante Tailscale y sesiones persistentes de \texttt{tmux}. Esta separación mejora la seguridad y facilita la depuración, y quedó validada en un vuelo real de más de 5 minutos con captura continua de 142 fotogramas y telemetría sincronizada, tras resolver un problema de desincronización mediante hilos independientes de captura y de telemetría (\autoref{sec:problema-sincronizacion-hilos}).
+
+Sobre los datos de ese vuelo, el pipeline de CVGL final —recuperación global con VLAD sobre DINOv3 (variante SAT-493M), verificación local con LoFTR y MAGSAC++, y corrección del punto de referencia por la actitud del dron— logra una precisión de localización con error mediano de \SI{6.1}{\metre} sobre las 76 consultas evaluadas, sin ningún fallo total de emparejamiento. Esta cifra no es el resultado de adoptar directamente el primer enfoque razonable, sino de comparar empíricamente varias alternativas en cada etapa (backbone, agregación, calibración de cámara, tamaño y resolución del mosaico de referencia, optimizaciones de tiempo) y quedarse con la que realmente funciona mejor sobre esta escena y este hardware concretos, no con la que la literatura sugiere por defecto.
+
+Una conclusión técnica importante es que la geolocalización visual completa requiere una capacidad de cálculo muy superior a la disponible en la Raspberry Pi 3B+ empleada (\autoref{sec:hardware-raspberry-comunicaciones}). La ejecución fuera de bordo no es una limitación del trabajo, sino una decisión de diseño deliberada: permite validar el algoritmo y cuantificar con precisión sus requisitos reales de cómputo y tiempo (\autoref{sec:analisis-rendimiento}) antes de plantear su optimización para ejecución embarcada en tiempo real.
+
+\section{Aportaciones del trabajo}
+\label{sec:aportaciones}
+
+Las principales aportaciones del trabajo son:
+
+\begin{enumerate}
+\item diseño e integración de un dron propio orientado a captura de datos visuales georreferenciados, incluyendo la resolución de varios incidentes reales de integración hardware (\autoref{sec:problemas-hardware});
+\item un flujo de captura robusto que asocia imagen y telemetría MAVLink de forma sincronizada mediante hilos independientes, con acceso remoto persistente mediante Tailscale y \texttt{tmux} tolerante a cortes de conexión;
+\item un pipeline de CVGL completo (mapa base $\rightarrow$ galería $\rightarrow$ recuperación global $\rightarrow$ emparejamiento local $\rightarrow$ corrección geométrica $\rightarrow$ error) validado sobre un vuelo real, no solo sobre datos sintéticos o de terceros;
+\item una comparación empírica sistemática de las alternativas de diseño del pipeline visual (2 agregaciones $\times$ 3 backbones para recuperación global; calibración de cámara; radio y zoom del mosaico de referencia; optimizaciones de LoFTR), documentando tanto lo que mejoró el resultado como lo que se probó y se descartó por no aportar mejora;
+\item un análisis cuantitativo del efecto de la actitud del dron sobre el error de localización medido, y de una corrección geométrica que reduce el error medio a la mitad al comparar contra el punto de terreno real en vez de la posición cruda de la antena GNSS.
+\end{enumerate}
+
+\section{Trabajos futuros}
+\label{sec:trabajos-futuros}
+
+Como continuación natural del proyecto se proponen las siguientes líneas de trabajo:
+
+\begin{itemize}
+\item \textbf{Documentar y automatizar la calibración física de la cámara respecto al cuerpo del dron} (offset de montaje y orientación relativa al IMU), que sigue sin cuantificarse de forma independiente de la corrección de actitud ya aplicada (\autoref{sec:correccion-nadir}). No debe confundirse con la calibración de los parámetros \emph{intrínsecos} de la cámara (distorsión de lente), que sí se investigó explícitamente y se descartó por no aportar mejora de precisión, e incluso perjudicarla ligeramente por un artefacto de deformación en los bordes de la imagen corregida (\autoref{sec:estado-alternativas-no-adoptadas});
+\item ampliar el conjunto de datos con vuelos en distintas zonas, condiciones de iluminación y estaciones del año, para evaluar la robustez del pipeline fuera de las condiciones del vuelo de validación;
+\item seguir optimizando el pipeline visual para reducir su tiempo de inferencia: la configuración actual (VLAD+DINOv3-SAT con \textit{early-exit}, FP16 y tamaño de imagen reducido) ya reduce el tiempo medio por consulta a unos \SI{0.4}{\second} en un ordenador con GPU (frente a varios segundos sin optimizar), pero sigue siendo insuficiente para ejecución embarcada en tiempo real en la Raspberry Pi actual; una vía adicional, no explorada en este trabajo, es sustituir el descriptor VLAD+DINOv3-SAT —que sigue siendo \textit{zero-shot}, sin ningún ajuste sobre pares reales dron-satélite— por un descriptor afinado (\textit{fine-tuned}) específicamente sobre pares de imágenes dron-satélite de la propia zona de vuelo, lo que podría mejorar precisión y/o permitir un modelo más ligero para la misma tarea;
+\item evaluar computadoras embarcadas con aceleración GPU (p.\,ej. Jetson) para ejecutar el pipeline de CVGL completo a bordo, sustituyendo a la Raspberry Pi 3B+ actual, que se ha usado deliberadamente solo para captura y comunicaciones (\autoref{sec:hardware-raspberry-comunicaciones});
+\item integrar la posición estimada por visión como entrada auxiliar al sistema de navegación del dron (por ejemplo, inyectándola como una fuente de posición adicional en el filtro de estimación de ArduPilot), en vez de calcularse únicamente de forma \textit{offline} tras el vuelo;
+\item estudiar la robustez del sistema ante pérdida real de GNSS durante el vuelo, cambios estacionales del terreno respecto al mosaico de referencia, y mapas de referencia de menor actualidad o resolución que los usados en este trabajo.
+\end{itemize}
+
+% ---------------------------------------------------------------------

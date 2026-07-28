@@ -1,0 +1,30 @@
+% ---------------------------------------------------------------------
+% Referencias cruzadas personalizadas y texto automático de LaTeX
+
+\ifcastellano % Las definiciones predefinidas empiezan con mayúscula
+	\renewcommand{\itemautorefname}{punto}
+	\renewcommand{\sectionautorefname}{sección}
+	\renewcommand{\subsectionautorefname}{subsección}
+	\renewcommand{\subsubsectionautorefname}{subsección}
+	\renewcommand{\figureautorefname}{figura}
+	\renewcommand{\tableautorefname}{tabla}
+	
+	\renewcommand{\indexname}{Índice alfabético}
+	\renewcommand{\bibname}{Bibliografía}
+	\renewcommand{\contentsname}{Índice general}
+	\renewcommand{\abstractname}{Resumen}	
+\fi
+
+\ifvalencia % És molt important fer aquestes definicions, si no, apareixeran en anglès
+	\renewcommand{\itemautorefname}{punt}
+	\renewcommand{\sectionautorefname}{secció}
+	\renewcommand{\subsectionautorefname}{subsecció}
+	\renewcommand{\subsubsectionautorefname}{subsecció}
+	\renewcommand{\figureautorefname}{figura}
+	\renewcommand{\tableautorefname}{taula}
+
+	\renewcommand{\indexname}{Índex alfabètic}
+	\renewcommand{\bibname}{Bibliografia}
+	\renewcommand{\contentsname}{Índex}
+	\renewcommand{\abstractname}{Resum}	
+\fi

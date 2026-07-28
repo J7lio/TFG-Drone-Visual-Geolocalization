@@ -1,0 +1,60 @@
+% ---------------------------------------------------------------------
+% Anexo de scripts
+% ---------------------------------------------------------------------
+
+\chapter{Scripts y archivos de apoyo}
+\label{cap:anexo-scripts}
+
+Este anexo recoge los scripts utilizados durante el proyecto, organizados en dos grupos: el \textbf{pipeline de producción} (carpeta \texttt{principal/}), que es la configuración final validada y la que se emplea para obtener los resultados del \autoref{cap:experimentos-resultados}, y los \textbf{scripts de experimentación} (carpeta \texttt{pruebas/}), usados para comparar alternativas (backbones, agregación, calibración de cámara, optimizaciones) antes de fijar la configuración final. Se documenta la función de cada archivo en vez de incluir el código completo, para no sobrecargar la memoria. El código fuente del pipeline de producción (\texttt{principal/}) está disponible públicamente en el repositorio del proyecto; los scripts de experimentación (\texttt{pruebas/}) no se publican por no tener el mismo nivel de cuidado ni ser necesarios para reproducir el resultado final, pero están disponibles bajo petición.
+
+\subsection*{Pipeline de producción (\texttt{principal/})}
+
+\begin{longtable}{p{0.36\textwidth}p{0.56\textwidth}}
+\caption{Scripts del pipeline de producción.}\label{tab:scripts-principal}\\
+\toprule
+\textbf{Archivo} & \textbf{Función} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Archivo} & \textbf{Función} \\
+\midrule
+\endhead
+\texttt{capturar\_vuelo.py \newline (codigos\_dron)} & Captura imágenes desde la cámara USB en un hilo independiente, escucha telemetría MAVLink en otro hilo y guarda ambos sincronizados en un CSV por sesión (ver \autoref{sec:captura-imagenes-telemetria}). \\
+\texttt{01\_download\_basemap.py} & Descarga un mosaico satelital georreferenciado (ESRI World Imagery) de la zona de vuelo y lo guarda como GeoTIFF. \\
+\texttt{02\_tile\_basemap\_\newline gallery.py} & Divide el mosaico en parches solapados dimensionados según la huella de la cámara y crea el índice geográfico de la galería. \\
+\texttt{10\_preparar\_queries\_\newline vuelo\_completo.py} & Normaliza los frames de vuelo: rotación a norte según \texttt{Rumbo\_Norte} y recorte central por altitud (ver \autoref{sec:planteamiento-cvgl}). \\
+\texttt{11\_ejecutar\_vuelo\_\newline completo.py} & Ejecuta el pipeline completo (recuperación global + LoFTR/MAGSAC++ con early-exit y FP16) sobre todas las queries y calcula el error de localización. \\
+\texttt{12\_graficos\_\newline resultados.py} & Genera las gráficas de resultados (trayectoria, error, desglose de tiempos) a partir del CSV de resultados. \\
+\texttt{descriptor\_produccion.py} & Descriptor global de producción: carga del backbone DINOv3-vitl16 (variante SAT-493M), extracción de tokens de parche y agregación VLAD (ajuste de vocabulario k-means e interfaz única de descriptor). \\
+\texttt{geo\_utils.py} & Utilidades de conversión píxel-coordenada, huella de cámara, escala Web Mercator, desplazamiento nadir por pitch/roll y distancia Haversine. \\
+\bottomrule
+\end{longtable}
+
+\subsection*{Scripts de experimentación (\texttt{pruebas/})}
+
+\begin{longtable}{p{0.36\textwidth}p{0.56\textwidth}}
+\caption{Scripts de experimentación y comparación de alternativas.}\label{tab:scripts-pruebas}\\
+\toprule
+\textbf{Archivo} & \textbf{Función} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Archivo} & \textbf{Función} \\
+\midrule
+\endhead
+\texttt{03\_test\_global\_\newline retrieval.py} & Evalúa la recuperación global de parches sobre un conjunto reducido de queries de prueba. \\
+\texttt{04\_local\_matching\_\newline loftr.py} & Ejecuta y ajusta el emparejamiento local con LoFTR sobre las queries de prueba. \\
+\texttt{05\_visualize\_matches.py} & Genera imágenes de diagnóstico: correspondencias entre frame de dron y parche satelital, y comparación entre posición real y estimada sobre el mapa. \\
+\texttt{06\_diagnose\_retrieval\_\newline rank.py} & Analiza en qué posición del ranking global aparece el parche geográficamente correcto. \\
+\texttt{07\_benchmark\_\newline optimizaciones.py} & Compara early-exit, precisión FP16 y \texttt{MAX\_SIDE} reducido para optimizar el tiempo de LoFTR. \\
+\texttt{08\_benchmark\_batching.py} & Evalúa el procesado por lotes de LoFTR (descartado: mejora modesta frente al riesgo de VRAM). \\
+\texttt{09\_efficientloftr\_\newline test.py} & Compara EfficientLoFTR frente a LoFTR ajustado (descartado: no supera a la configuración de kornia ya optimizada). \\
+\texttt{13\_comparar\_retrieval\_\newline metodos.py} & Compara la matriz completa de 2 agregaciones (GeM, VLAD) por 3 backbones (DINOv2, DINOv3-LVD, DINOv3-SAT) — resultado que fija la configuración de producción. \\
+\texttt{14\_graficos\_comparacion\_\newline metodos.py} & Genera la gráfica comparativa de métodos de recuperación global. \\
+\texttt{15\_test\_radio\_zoom\_\newline basemap.py} & Evalúa el efecto del radio y el nivel de zoom del mosaico de referencia en precisión y tiempo. \\
+\texttt{16\_graficos\_radio\_\newline zoom.py} & Genera las gráficas del barrido de radio/zoom del mosaico. \\
+\texttt{gallery\_cache.py} & Caché de descriptores GeM+DINOv2 (usado solo como referencia en la comparativa de métodos). \\
+\bottomrule
+\end{longtable}
+
+% ---------------------------------------------------------------------

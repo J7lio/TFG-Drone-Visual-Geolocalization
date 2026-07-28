@@ -1,0 +1,175 @@
+% ---------------------------------------------------------------------
+% Experimentos y resultados
+% ---------------------------------------------------------------------
+
+\chapter{Experimentos y resultados}
+\label{cap:experimentos-resultados}
+
+\begin{Resumen}
+Este capítulo documenta el vuelo real usado para validar el pipeline de geolocalización visual, el conjunto de datos capturado, y los resultados de precisión y rendimiento obtenidos: comparación de descriptores de recuperación global, efecto de la corrección del punto de verdad-terreno, efecto de la altitud de vuelo, desglose de tiempos, y el barrido de parámetros del mosaico de referencia.
+\end{Resumen}
+
+\section{Plan experimental}
+\label{sec:plan-experimental}
+
+Los experimentos se plantearon en tres fases. La primera fase validó el funcionamiento del dron y la captura sincronizada de imágenes y telemetría en tierra y en vuelos cortos. La segunda fase realizó un vuelo controlado y georreferenciado destinado a la adquisición de datos para las pruebas del pipeline. La tercera fase ejecutó el pipeline de CVGL sobre las imágenes capturadas y comparó las posiciones estimadas con la referencia GNSS corregida (\autoref{sec:correccion-nadir}).
+
+\section{Zona y condiciones de vuelo}
+\label{sec:zona-condiciones-vuelo}
+
+El vuelo de validación se realizó el 16 de julio de 2026. Por razones de privacidad, no se indican las coordenadas exactas de la zona; se trata de un terreno rural con bancales, de vegetación escasa y bastante seca y repetitiva a lo largo de toda la zona de vuelo. La captura comenzó a las 09:58:43 y finalizó a las 10:03:59, con una duración total de 5 minutos y 16 segundos.
+
+\begin{table}[htbp]
+\centering
+\caption{Resumen del vuelo de validación.}
+\label{tab:sesiones-vuelo}
+\begin{tabularx}{\textwidth}{>{\bfseries}p{0.30\textwidth}X}
+\toprule
+\textbf{Campo} & \textbf{Valor} \\
+\midrule
+Fecha & 16 de julio de 2026 \\
+Duración & 5 min 16 s \\
+Fotogramas capturados & 142 \\
+Frecuencia media de captura & 0,45 Hz ($\approx$ 1 fotograma cada 2,2 s) \\
+Rango de altitud relativa & de despegue/aterrizaje ($\approx$ 0 m) hasta 120,2 m \\
+Fotogramas usados como consulta (altitud $>$ 60 m) & 76 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+La frecuencia de captura medida (\SI{0.45}{\hertz}, un fotograma cada $\approx$\SI{2.2}{\second}) es notablemente menor que el intervalo nominal de \SI{0.5}{\second} configurado en \texttt{INTERVALO\_SEG} (\texttt{capturar\_vuelo.py}, \autoref{sec:captura-imagenes-telemetria}). Esta diferencia se debe a la limitación de cómputo de la Raspberry Pi 3B+: escribir a disco cada fotograma PNG a la resolución nativa del sensor (1920$\times$1200) tarda por sí solo más que los \SI{0.5}{\second} configurados, por lo que el ritmo efectivo de captura queda determinado por el tiempo de escritura a disco, no por \texttt{INTERVALO\_SEG}. Esto no compromete la validez de los datos: los hilos independientes de cámara y telemetría (\autoref{sec:problema-sincronizacion-hilos}) garantizan que, aunque el ritmo de captura sea más lento de lo previsto, cada fotograma guardado sigue asociado a la telemetría de su mismo instante real.
+
+De los 142 fotogramas capturados, se descartan los de altitud inferior a 60 m (despegue, aterrizaje y maniobras a baja altura) porque a esa altura el terreno cubierto por la cámara es demasiado pequeño para ser representativo de la galería satelital construida, quedando 76 fotogramas como consultas de evaluación.
+
+\section{Métricas de evaluación}
+\label{sec:metricas-evaluacion}
+
+Las métricas usadas para evaluar el sistema son:
+
+\begin{itemize}
+\item \textbf{Rank de recuperación global}: posición del parche geográficamente correcto dentro del \textit{ranking} de similitud completo (no solo el top-k), y porcentaje de consultas con el parche correcto dentro del top-1/top-5/top-10.
+\item \textbf{Número de \textit{inliers}}: correspondencias geométricamente consistentes tras MAGSAC++, para el mejor candidato de cada consulta.
+\item \textbf{Error de localización}: distancia de Haversine (\autoref{eq:haversine}) entre la posición estimada por homografía y la coordenada GNSS de referencia, calculada tanto sin corregir (\textit{bruto}, contra la posición GNSS cruda) como corregida por la actitud del dron (\autoref{sec:correccion-nadir}).
+\item \textbf{Tiempo de procesamiento por consulta}: desglosado entre extracción de descriptor global y emparejamiento local, con y sin las optimizaciones de la \autoref{sec:optimizacion-loftr}.
+\end{itemize}
+
+\section{Resultados de recuperación global}
+\label{sec:resultados-recuperacion-global}
+
+La \autoref{tab:resultados-global} resume los resultados de recuperación global para las 6 combinaciones de agregación (GeM/VLAD) y backbone (DINOv2, DINOv3-vitb16 LVD, DINOv3-vitl16 SAT) evaluadas sobre las mismas 76 consultas y la misma galería de 360 parches (ver también la \autoref{fig:comparacion-retrieval} del \autoref{cap:geolocalizacion-visual}).
+
+\begin{table}[htbp]
+\centering
+\caption{Resultados de recuperación global por método (n=76 consultas, galería de 360 parches).}
+\label{tab:resultados-global}
+\begin{tabularx}{\textwidth}{Xp{0.13\textwidth}p{0.13\textwidth}p{0.11\textwidth}p{0.11\textwidth}p{0.12\textwidth}}
+\toprule
+\textbf{Método} & \textbf{Rank mediana} & \textbf{Rank media} & \textbf{Top-1} & \textbf{Top-5} & \textbf{Top-10} \\
+\midrule
+GeM + DINOv2-vitl14           & 13 & 18,9 & 0,0\%   & 17,1\% & 43,4\% \\
+GeM + DINOv3-vitb16 (LVD)     & 10 & 18,6 & 13,2\%  & 32,9\% & 51,3\% \\
+GeM + DINOv3-vitl16 (SAT)     & 1  & 3,9  & 77,6\%  & 96,1\% & 96,1\% \\
+VLAD + DINOv2-vitl14          & 1  & 2,8  & 77,6\%  & 89,5\% & 93,4\% \\
+VLAD + DINOv3-vitb16 (LVD)    & 1  & 4,5  & 77,6\%  & 89,5\% & 94,7\% \\
+\textbf{VLAD + DINOv3-vitl16 (SAT)} & \textbf{1} & \textbf{1,2} & \textbf{89,5\%} & \textbf{98,7\%} & \textbf{100,0\%} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+El backbone (DINOv2 frente a DINOv3-SAT) tiene más impacto que la agregación (GeM frente a VLAD) quedándose cada variable sola: cambiar solo el backbone bajo GeM ya mejora el top-1 de 0\,\% a 77,6\,\%. Combinar ambas mejoras (VLAD + DINOv3-SAT) da el mejor resultado. Esta es la configuración adoptada en producción (\texttt{descriptor\_produccion.py}).
+
+\section{Resultados de emparejamiento local y localización}
+\label{sec:resultados-matching-local}
+
+Sobre las 76 consultas, con la configuración final (VLAD+DINOv3-SAT + LoFTR/MAGSAC++ con \textit{early-exit}), \textbf{las 76 consultas obtuvieron un candidato con homografía válida} (0 fallos de emparejamiento). El error de localización obtenido fue:
+
+\begin{itemize}
+\item \textbf{Error bruto} (contra la posición GNSS cruda): mediana \SI{12.2}{\metre}, media \SI{12.3}{\metre}.
+\item \textbf{Error corregido} (contra el punto de terreno corregido por \textit{pitch}/\textit{roll}, \autoref{sec:correccion-nadir}): mediana \SI{6.1}{\metre}, media \SI{6.2}{\metre}, mínimo \SI{2.5}{\metre}, máximo \SI{10.4}{\metre}.
+\end{itemize}
+
+La \autoref{fig:error-localizacion} muestra la distribución completa de ambos errores. La corrección del punto de verdad-terreno no solo reduce el error medio a la mitad, sino que también reduce su dispersión: la distribución corregida está mucho más concentrada, lo que confirma que buena parte de la variabilidad del error bruto se debía a comparar contra un punto de referencia sistemáticamente desplazado según la actitud del dron, no a fallos aleatorios del pipeline visual.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{error_localizacion.png}
+\caption{Distribución del error de localización, bruto frente a corregido por actitud del dron (n=76).}
+\label{fig:error-localizacion}
+\end{figure}
+
+\subsection{Efecto de la altitud de vuelo}
+\label{sec:efecto-altitud}
+
+El vuelo de validación cubre un rango de altitudes desde poco más de 60 m hasta 120 m, con dos tramos de vuelo relativamente estables alrededor de $\approx$80 m y $\approx$120 m (con una transición gradual entre ambos). Separando las 76 consultas por altitud (umbral en 100 m):
+
+\begin{itemize}
+\item \textbf{Consultas a $\approx$80 m} (\SI{41}{consultas}, altitud $<$ \SI{100}{\metre}): error mediana \SI{5.1}{\metre}, media \SI{5.1}{\metre}.
+\item \textbf{Consultas a $\approx$120 m} (\SI{35}{consultas}, altitud $\geq$ \SI{100}{\metre}): error mediana \SI{7.2}{\metre}, media \SI{7.5}{\metre}.
+\end{itemize}
+
+El tramo a mayor altitud tiene un error algo mayor, coherente con que a más altura cada píxel del fotograma cubre más terreno real, por lo que un mismo error de proyección en píxeles se traduce en un error mayor en metros. Las Figuras \ref{fig:trayectoria-error-80m} y \ref{fig:trayectoria-error-120m} muestran, para cada tramo, la posición GNSS cruda, la posición corregida por actitud y la posición estimada por el pipeline, para cada consulta (sin conectarlas en una trayectoria continua entre fotogramas, ya que el \textit{pitch}/\textit{roll} real oscila de forma apreciable entre fotogramas consecutivos en este dron sin \textit{gimbal}, y conectar los puntos corregidos generaría un zigzag que no representa ningún desplazamiento real).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{trayectoria_error_80m.png}
+\caption{Posición GNSS, corregida y estimada, para las consultas a $\approx$80 m de altitud (n=41).}
+\label{fig:trayectoria-error-80m}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{trayectoria_error_120m.png}
+\caption{Posición GNSS, corregida y estimada, para las consultas a $\approx$120 m de altitud (n=35).}
+\label{fig:trayectoria-error-120m}
+\end{figure}
+
+\section{Análisis de rendimiento}
+\label{sec:analisis-rendimiento}
+
+El pipeline completo, ejecutado sobre un ordenador externo con GPU (NVIDIA GeForce RTX 3050 Laptop, 4 GB), tarda una media de \SI{0.41}{\second} por consulta (\SI{31.5}{\second} en total para las 76 consultas), de los cuales aproximadamente dos tercios corresponden a la extracción del descriptor VLAD+DINOv3-SAT y un tercio al emparejamiento LoFTR con \textit{early-exit} (\autoref{fig:tiempo-desglose} del \autoref{cap:geolocalizacion-visual}). Este tiempo no incluye la carga inicial de los modelos en memoria ($\approx$\SI{7}{\second} la primera consulta de cada sesión), que solo se paga una vez por proceso.
+
+Esta cifra corresponde a la ejecución en un ordenador externo con GPU dedicada, no en la Raspberry Pi embarcada. La Raspberry Pi 3B+ utilizada en este proyecto no dispone de aceleración por GPU comparable ni de la memoria necesaria para cargar los modelos DINOv3-vitl16 y LoFTR simultáneamente; se ha usado únicamente para las tareas de captura, registro de telemetría y comunicaciones (\autoref{sec:limitaciones-software}), dejando la ejecución completa del pipeline visual fuera de bordo. No se ha intentado ejecutar el pipeline completo sobre la Raspberry Pi 3B+: dada su falta de aceleración GPU y de memoria suficiente para los modelos empleados, se considera inviable de antemano y no aporta información adicional medirlo directamente.
+
+\subsection{Viabilidad de cómputo embarcado con aceleración GPU}
+\label{sec:viabilidad-jetson}
+
+Una Raspberry Pi no es la plataforma ideal para ejecutar el pipeline de geolocalización visual a bordo: se ha usado en este proyecto porque era el hardware disponible, no porque sea la opción de diseño recomendada. Para una futura ejecución embarcada en tiempo real, el candidato natural es una computadora con aceleración GPU de bajo consumo, como los módulos NVIDIA Jetson (p.\,ej. Jetson Orin Nano), pensados específicamente para inferencia de redes neuronales en el borde con un consumo de \SIrange{7}{25}{\watt}, frente a los \SIrange{115}{170}{\watt} de una GPU de portátil/sobremesa como la usada en este trabajo.
+
+No se ha encontrado (ni realizado, al no disponer del hardware) un benchmark directo que compare exactamente el modelo usado en este proyecto (DINOv3-vitl16 + LoFTR) entre una RTX 3050 y una Jetson Orin Nano, por lo que aquí solo se ofrece una referencia de orden de magnitud a partir de benchmarks publicados de terceros sobre modelos comparables, no una estimación precisa para este pipeline concreto:
+
+\begin{itemize}
+\item Sobre Jetson Orin Nano, un \textit{Vision Transformer} ViT-B/16 (un backbone bastante más pequeño que el ViT-L/16 usado en este trabajo) tarda entre 17 y 20\,ms por imagen a resolución 224$\times$224 en FP16, y entre 41 y 49\,ms a 384$\times$384 \parencite{jetson_vit_benchmark}.
+\item En otra comparativa publicada, para un modelo de lenguaje (BERT-Large, no visual, pero indicativo de la diferencia de arquitectura), una RTX 3060 de sobremesa resultó unas 7 veces más rápida que una Jetson AGX Xavier (un módulo Jetson de generación anterior y más potente que la Orin Nano) en inferencia FP16 \parencite{rtx_jetson_bert_benchmark}.
+\end{itemize}
+
+Con estas referencias, es razonable esperar que ejecutar este pipeline sobre una Jetson Orin Nano resultase en un tiempo por consulta varias veces mayor que en la RTX 3050 usada (los \SI{0.41}{\second}/consulta medidos), probablemente en el rango de 1--3 segundos por consulta, sin que esto deba tomarse como una estimación precisa, dado que ni el modelo (ViT-L/16, más grande que el ViT-B/16 de la referencia) ni la generación de Jetson coinciden exactamente con las referencias disponibles. Confirmar esta cifra con una medida real sobre hardware Jetson queda como trabajo futuro (\autoref{sec:trabajos-futuros}), y sería el paso necesario antes de decidir si esta familia de dispositivos permite una ejecución a bordo en tiempo real o si haría falta, además, seguir reduciendo el propio modelo (p.\,ej. una variante más pequeña de DINOv3, o cuantización a INT8).
+
+\subsection{Efecto del radio y del zoom del mosaico de referencia}
+\label{sec:efecto-radio-zoom}
+
+Además del pipeline de matching, se evaluó el efecto de dos parámetros de la preparación del mosaico de referencia (\autoref{sec:generacion-mapa-base}) sobre precisión y tiempo, usando un subconjunto de 15 consultas muestreadas uniformemente de las 76 disponibles: el radio del área descargada (500, 1500, 3000 y 5000 m, a zoom fijo 18) y el nivel de zoom de las teselas (17, 18 y 19, a radio fijo 1500 m). La \autoref{fig:precision-radio-zoom} muestra el efecto sobre la precisión y la \autoref{fig:tiempo-query-radio-zoom} sobre el tiempo por consulta.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{precision_radio_zoom.png}
+\caption{Error de localización (15 consultas de prueba) según el radio del mosaico (zoom=18 fijo) y según el nivel de zoom (radio=1500\,m fijo).}
+\label{fig:precision-radio-zoom}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{tiempo_query_radio_zoom.png}
+\caption{Tiempo de matching por consulta (retrieval + LoFTR) según radio y zoom del mosaico.}
+\label{fig:tiempo-query-radio-zoom}
+\end{figure}
+
+El radio del mosaico apenas afecta a la precisión (variación de \SI{0.6}{\metre} entre los extremos probados, dentro del ruido esperable con solo 15 consultas) pero sí al coste de preparación, que crece muy rápido con el área (\autoref{fig:tiempos-setup-radio-zoom}). El nivel de zoom 18 (el usado en producción) tiene la mejor mediana de error; el zoom 17 produjo 2 fallos catastróficos de $\approx$830 m sobre las mismas 15 consultas, y el zoom 19 no mejora la precisión pero sí el tiempo de descarga y de matching por consulta. Estos resultados confirman que la configuración de producción (radio 1500 m, zoom 18) es una elección razonable: aumentar el radio apenas mejora la precisión a mucho coste, y bajar el zoom introduce fallos raros pero severos.
+
+\section{Discusión}
+\label{sec:discusion-resultados}
+
+Los resultados confirman que el sistema cumple los criterios de éxito definidos en el \autoref{sec:criterios-exito}: el dron capturó imágenes con marcas temporales y telemetría sincronizada en un vuelo real, y el pipeline de CVGL estimó la posición sobre las 76 consultas evaluadas con un error mediano de \SI{6.1}{\metre} sin ningún fallo total de emparejamiento.
+
+Los principales factores que explican el error residual, de mayor a menor impacto observado, son: (1) la actitud instantánea del dron en el momento de captura, que sin corregir (\autoref{sec:correccion-nadir}) duplica el error medio; (2) la altitud de vuelo, con un error algo mayor a 120 m que a 80 m por la relación entre resolución en el suelo y altura; y (3) la resolución del mosaico de referencia (nivel de zoom), donde una resolución insuficiente no degrada la precisión típica pero sí introduce fallos catastróficos ocasionales. El radio del mosaico, en cambio, no resultó ser un factor relevante para la precisión en el rango evaluado.
+
+% ---------------------------------------------------------------------

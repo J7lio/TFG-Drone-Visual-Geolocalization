@@ -1,0 +1,69 @@
+\usepackage{listings}
+
+\definecolor{Paper}{HTML}{FFF6EE}
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+% Matlab
+
+\lstset{
+	language = Matlab,
+	basicstyle = \ttfamily\small,         
+	identifierstyle = ,           
+	commentstyle = \color[rgb]{0,.5,0},
+	stringstyle = \color[rgb]{.7,.2,.7},
+	tabsize = 4,
+	showstringspaces = false,
+	frame = single,
+	rulecolor = \color[rgb]{0.4,0.4,0.4},
+	framerule = 0.2pt,
+	framesep = 9pt,
+	xleftmargin = 9pt,
+	xrightmargin = 9pt,		
+	backgroundcolor = \color{Paper},
+	morekeywords = {},
+	keywordstyle = \color{blue},
+	}
+
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+% C
+
+%\lstset{
+%	language = C,
+%	basicstyle = \ttfamily\small,         
+%	identifierstyle = ,           
+%	commentstyle = \color[rgb]{.4,.4,.4},%\itshape,
+%	stringstyle = \color[rgb]{0,.5,0},
+%	tabsize = 4,
+%	morekeywords = {},
+%	keywordstyle = \color{blue},	
+%	frame=single,
+%	framesep = 9pt,
+%	xleftmargin = 24pt,
+%	xrightmargin = 16pt,		
+%	backgroundcolor = \color{Paper},
+%	numbers = left,                    
+%	numbersep = 16pt,                   
+%	numberstyle = \scriptsize\color[rgb]{.4,.4,.4}, 
+%	rulecolor = \color{black},         
+%	showspaces = false,                
+%	showstringspaces = false,          
+%	showtabs = false,        
+%	}
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+
+\lstset{literate=
+  {á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+  {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+  {à}{{\`a}}1 {è}{{\`e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1 {ù}{{\`u}}1
+  {À}{{\`A}}1 {È}{{\'E}}1 {Ì}{{\`I}}1 {Ò}{{\`O}}1 {Ù}{{\`U}}1
+  {ä}{{\"a}}1 {ë}{{\"e}}1 {ï}{{\"i}}1 {ö}{{\"o}}1 {ü}{{\"u}}1
+  {Ä}{{\"A}}1 {Ë}{{\"E}}1 {Ï}{{\"I}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1
+  {â}{{\^a}}1 {ê}{{\^e}}1 {î}{{\^i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+  {Â}{{\^A}}1 {Ê}{{\^E}}1 {Î}{{\^I}}1 {Ô}{{\^O}}1 {Û}{{\^U}}1
+  {Ã}{{\~A}}1 {ã}{{\~a}}1 {Õ}{{\~O}}1 {õ}{{\~o}}1
+}

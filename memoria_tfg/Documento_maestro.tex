@@ -1,0 +1,172 @@
+% ---------------------------------------------------------------------
+%                   MEMORIA DEL TRABAJO DE FIN DE GRADO
+% ---------------------------------------------------------------------
+
+\documentclass[tfg, rm, castellano]{tfgepsa}
+
+% Opciones de la clase 'tfgepsa'
+%
+% tfg		  - Formato TFG para subir a Ebrón (no se incluye la portada, la genera Ebrón)
+% imprimir    - Doble cara márgenes horizontales asimétricos (parar imprimir)
+% ebookpdf    - Formato PDF para tabletas
+%
+% rm          - Tipo de letra roman
+% sf          - Tipo de letra sanserif
+%
+% nomathskip  - No se modifican las distancias de las ecuaciones 
+%
+% castellano  - El TFG está escrito en castellano
+% valencia    - El TFG està escrit en valencià
+% english     - El TFG está escrito en inglés
+
+% ---------------------------------------------------------------------
+% Configuraciones presonalizadas 
+
+\input{./configuraciones/preambulo}
+\input{./configuraciones/preambulo_listings}
+
+% ---------------------------------------------------------------------
+% Configuración de la bibliografía
+
+\bibliography{./bibliografia.bib}
+
+% ---------------------------------------------------------------------
+% Las carpetas para los gráficos
+
+\graphicspath{
+	{./figuras/}
+	{./logos/}
+	}
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+
+% Asegúrate de que el título del TFG coincide con la información que se introdujo en la aplicación Ebrón al darlo de alta. La información del título solo se imprimirá en las opciones 'imprimir' y 'ebookpdf'. En la versión tfg para subir a Ebrón no se incluye la portada.
+
+\Titulo{Diseño e Integración de un Dron para Navegación Autónoma Basada en Visión}
+\Alumnoa{Julio de la Peñita Mateo}
+\Tutores{Pau Seguí Gascó}
+\Titulacion{GRADO EN INFORMÁTICA INDUSTRIAL Y ROBÓTICA}
+\Convocatoria{Septiembre 2026}
+
+%\Titulo{\huge Cuando el título del TFG es muy muy muy largo, utiliza este comando para conseguir que la información de la portada esté contenida en una sola página. De lo contrario se genera una salida no deseada: una página en blanco y el título del TFG está en una página diferente a la información del autor y tutores}
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+
+\begin{document}
+
+% -------------------------------------------------------
+
+\frontmatter
+
+% -------------------------------------------------------
+% Página de título
+
+% ATENCIÓN: Con la nueva normativa aprobada en mayo de 2022, la memoria del TFG se debe subir sin portada ya que es la aplicación Ebrón la que la añade de forma automática.
+
+% Se mantiene el comando \maketitle debido a que el alumno puede optar por la versión impresa en la que sí que aparece la portada. Asegúrate de que el título del TFG coincide con la información que se introdujo en la aplicación Ebrón al darlo de alta
+
+\maketitle
+
+% -------------------------------------------------------
+% Resumen, prólogo o prefacio
+
+% El documento debe empezar con la página del resumen y las palabras clave
+
+\cleardoublepage
+\thispagestyle{empty}
+\phantomsection
+\addcontentsline{toc}{chapter}{\abstractname}
+
+\input{cap_Resumen}
+
+% -------------------------------------------------------
+% Índice: tabla de contenidos
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\contentsname}
+
+\tableofcontents
+
+% -------------------------------------------------------
+% Lista de figuras
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\listfigurename}
+
+\listoffigures
+
+% -------------------------------------------------------
+% Lista de tablas
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{\listtablename}
+
+\listoftables
+
+% -------------------------------------------------------
+% Numeración de páginas números arábicos
+% Primer capítulo en página 1
+
+\mainmatter
+
+% -------------------------------------------------------
+% -------------------------------------------------------
+% -------------------------------------------------------
+% Capítulos de la publicación
+
+\input{cap_Introduccion}
+
+\input{cap_Objetivos_competencias}
+
+\input{cap_Estado_del_arte}
+
+\input{cap_Diseno_sistema}
+
+\input{cap_Integracion_hardware}
+
+\input{cap_Integracion_software}
+
+\input{cap_Geolocalizacion_visual}
+
+\input{cap_Experimentos_resultados}
+
+\input{cap_Planificacion_presupuesto}
+
+\input{cap_Conclusiones}
+
+% -------------------------------------------------------
+% -------------------------------------------------------
+% -------------------------------------------------------
+% Bibliografía
+
+\bibitemsep = 3ex
+\bibhang = 2em
+
+\printbibliography[heading=bibintoc,title=\bibname]
+
+
+% -------------------------------------------------------
+% Anexos
+
+\appendix
+
+\input{cap_Anexo_scripts}
+
+\input{cap_Anexo_checklist}
+
+\input{cap_Anexo_ODS}
+
+
+% -------------------------------------------------------
+% Fin del documento
+
+\end{document}
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------

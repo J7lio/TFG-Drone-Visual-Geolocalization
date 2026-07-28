@@ -1,0 +1,64 @@
+% ---------------------------------------------------------------------
+% Estado del arte
+% ---------------------------------------------------------------------
+
+\chapter{Estado del arte}
+\label{cap:estado-arte}
+
+\begin{Resumen}
+Este capítulo introduce los conceptos técnicos que sustentan el proyecto: navegación de drones, protocolos de comunicación, computación de borde y geolocalización visual cruzada. El objetivo no es realizar una revisión exhaustiva, sino fijar el marco necesario para justificar las decisiones de diseño adoptadas.
+\end{Resumen}
+
+\section{Navegación en drones multirrotor}
+\label{sec:estado-navegacion-drones}
+
+Un dron multirrotor mantiene el vuelo mediante el control coordinado de varios motores eléctricos. En un cuadricóptero, la variación de empuje de cada motor permite controlar alabeo, cabeceo, guiñada y empuje vertical. El controlador de vuelo fusiona información de sensores inerciales, barómetro, brújula y GNSS para estabilizar la aeronave y ejecutar modos de vuelo asistidos o autónomos.
+
+Las plataformas basadas en ArduPilot permiten configurar parámetros de vuelo, calibrar sensores, cargar misiones y comunicar telemetría mediante MAVLink \parencite{ardupilot_docs,mavlink_docs}. Esta arquitectura resulta adecuada para un TFG de integración porque separa el control de bajo nivel, ejecutado por el controlador de vuelo, del procesamiento de alto nivel, que puede ejecutarse en una computadora externa.
+
+\section{Limitaciones de la navegación GNSS}
+\label{sec:estado-limitaciones-gnss}
+
+El GNSS proporciona una estimación global de posición, pero puede degradarse por multitrayecto, pérdida de visibilidad de satélites, interferencias o ataques de suplantación. En un contexto de navegación autónoma, estas limitaciones justifican el estudio de fuentes de localización complementarias. La visión artificial es especialmente atractiva porque muchas plataformas ya incorporan cámaras para inspección, grabación o percepción del entorno.
+
+\section{Computación de borde en plataformas aéreas}
+\label{sec:estado-edge}
+
+La computación de borde consiste en procesar datos cerca del sensor que los genera. En un dron, esto reduce la dependencia de un enlace permanente con tierra y permite tomar decisiones con menor latencia. No obstante, la capacidad de cálculo embarcada está limitada por peso, consumo y disipación térmica. En este proyecto se emplea una Raspberry Pi para captura, almacenamiento y comunicaciones, pero el procesamiento visual completo se evalúa inicialmente fuera de bordo.
+
+\section{Geolocalización Visual Cruzada}
+\label{sec:estado-cvgl}
+
+La Geolocalización Visual Cruzada compara una imagen tomada desde una vista determinada con una base de datos georreferenciada capturada desde otra vista. En el caso de un dron, la imagen de consulta procede de la cámara embarcada y la base de datos puede generarse a partir de mapas satelitales o aéreos. El problema es complejo porque existen cambios de escala, orientación, iluminación, estación del año, perspectiva y resolución.
+
+Un enfoque habitual divide el problema en dos etapas. Primero se realiza una recuperación global, en la que cada imagen se representa mediante un descriptor compacto y se buscan candidatos visualmente similares. Después se aplica una verificación local, que calcula correspondencias entre la imagen de consulta y los candidatos seleccionados para estimar una transformación geométrica consistente.
+
+\section{Descriptores globales y emparejamiento local}
+\label{sec:estado-descriptores-matching}
+
+Los modelos visuales auto-supervisados como DINOv2 han demostrado capacidad para producir características robustas y transferibles a tareas para las que no fueron entrenados explícitamente \parencite{oquab2023dinov2}. AnyLoc explota precisamente esta propiedad para el reconocimiento visual de lugares (\textit{Visual Place Recognition}, VPR): en vez de entrenar una red específica para cada dominio (interior, urbano, carretera, aéreo\ldots), propone extraer los tokens de parche de un backbone auto-supervisado ya entrenado como DINOv2 --sin ajustarlo a ningún dominio concreto-- y agregarlos en un único descriptor global mediante VLAD, mostrando que este enfoque \textit{zero-shot} generaliza razonablemente bien entre entornos muy distintos entre sí \parencite{keetha2023anyloc}. Este proyecto adopta la misma filosofía --backbone auto-supervisado congelado más agregación, sin entrenar nada específico para el par dron-satélite-- pero comparando explícitamente sus variantes (backbone y agregación) sobre la escena propia, en vez de asumir directamente la configuración del trabajo original (\autoref{sec:estado-alternativas-no-adoptadas}).
+
+DINOv3 es la evolución del backbone anterior, entrenada sobre un conjunto de datos mayor y disponible en variantes especializadas por dominio \parencite{simeoni2025dinov3}. En particular, Meta AI publica una variante entrenada específicamente sobre imágenes de satélite (SAT-493M), que resulta especialmente adecuada para este proyecto porque la galería de referencia es, precisamente, satelital: aunque el dominio \enquote{vista de dron} no esté cubierto por el preentrenamiento, comparte mucha más estructura visual con imágenes de satélite que un backbone entrenado sobre fotografía web genérica.
+
+Como alternativa a la agregación GeM, VLAD (\textit{Vector of Locally Aggregated Descriptors}) construye un vocabulario visual mediante \textit{k-means} sobre los propios parches de la galería y agrega los tokens de cada imagen como residuos respecto a ese vocabulario \parencite{arandjelovic2016netvlad}. El repositorio de referencia de AnyLoc trata VLAD, no GeM, como su variante principal, por lo que en este trabajo se ha comparado empíricamente ambas agregaciones sobre los dos backbones (DINOv2 y DINOv3) en vez de asumir directamente cuál rendiría mejor sobre esta escena concreta (ver \autoref{sec:resultados-recuperacion-global}).
+
+Para la verificación local, LoFTR propone un emparejamiento sin detectores clásicos de puntos clave, basado en transformadores, que puede ser útil cuando las imágenes presentan baja textura o cambios importantes de punto de vista \parencite{sun2021loftr}. Sobre las correspondencias que produce LoFTR, la estimación robusta de la transformación geométrica (homografía) se realiza con MAGSAC++, una variante de RANSAC que no requiere fijar a mano un umbral de error fijo para clasificar inliers/outliers, sino que marginaliza sobre un rango de umbrales, lo que la hace más robusta cuando la proporción de correspondencias erróneas varía mucho de una imagen a otra \parencite{barath2020magsac++}. En este trabajo se emplea esta combinación (LoFTR + MAGSAC++) para validar geométricamente los candidatos obtenidos en la fase global y estimar una posición final sobre el mosaico satelital.
+
+\subsection{Alternativas evaluadas y no adoptadas}
+\label{sec:estado-alternativas-no-adoptadas}
+
+Varias decisiones de diseño del pipeline final (\autoref{cap:geolocalizacion-visual}) se tomaron tras comparar empíricamente varias alternativas, no por adopción directa de lo propuesto en la literatura:
+
+\begin{itemize}
+\item \textbf{GeM+DINOv2 frente a VLAD+DINOv3-SAT}: la configuración originalmente prevista (GeM sobre DINOv2, siguiendo el enfoque más simple de AnyLoc) obtenía una precisión de recuperación global muy baja sobre la escena real de vuelo. Cambiar a VLAD+DINOv3-SAT mejoró sustancialmente el \textit{ranking} del parche correcto (ver \autoref{sec:resultados-recuperacion-global}).
+\item \textbf{Calibración de la cámara}: se calibró la cámara (parámetros intrínsecos y distorsión, método de Zhang) y se probó a corregir la distorsión de las imágenes antes de la recuperación y el emparejamiento. El resultado fue una ligera pérdida de precisión, no una mejora, atribuible a un artefacto de deformación en los bordes introducido por \texttt{cv2.undistort} con un campo de visión tan amplio ($\approx$\ang{120}). Se descartó esta corrección en la versión final (ver \autoref{sec:problemas-hardware}).
+\item \textbf{\textit{Batching} de LoFTR}: procesar varios pares candidato-consulta en el mismo lote de LoFTR ofrecía una mejora de tiempo modesta a cambio de un mayor riesgo de agotar memoria de GPU; se descartó en favor de la estrategia de \textit{early-exit} (parar en cuanto un candidato supera un umbral de \textit{inliers}).
+\item \textbf{EfficientLoFTR}: una variante más ligera de LoFTR no superó en la práctica al LoFTR ya optimizado con \textit{early-exit}, precisión FP16 y tamaño de imagen reducido.
+\end{itemize}
+
+\section{Herramientas de estación de tierra}
+\label{sec:estado-estaciones-tierra}
+
+Las estaciones de tierra facilitan la configuración y operación de la aeronave. En este proyecto se utiliza Mission Planner para configurar y calibrar el dron, mientras que QGroundControl se emplea para cargar misiones de forma más cómoda durante las pruebas \parencite{qgroundcontrol_docs}. Esta combinación permite separar la fase de parametrización del controlador de vuelo de la planificación operativa de misiones.
+
+% ---------------------------------------------------------------------

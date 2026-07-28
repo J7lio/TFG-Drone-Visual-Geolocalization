@@ -1,0 +1,65 @@
+% ---------------------------------------------------------------------
+% Introducción
+% ---------------------------------------------------------------------
+
+\chapter{Introducción}
+\label{cap:introduccion}
+
+\begin{Resumen}
+Este capítulo presenta el contexto del Trabajo de Fin de Grado, la motivación técnica del proyecto y el alcance inicial de la memoria. El trabajo se plantea como la construcción e integración de una plataforma aérea propia para capturar datos reales y estudiar la viabilidad de una navegación asistida por visión en escenarios en los que la señal GNSS no sea fiable o no esté disponible.
+\end{Resumen}
+
+\section{Contexto}
+\label{sec:introduccion-contexto}
+
+Los vehículos aéreos no tripulados han pasado de ser plataformas principalmente orientadas al pilotaje remoto a convertirse en sistemas robóticos capaces de ejecutar misiones semiautónomas. Esta evolución se apoya en controladores de vuelo cada vez más completos, sensores de bajo coste, enlaces de comunicación robustos y computadoras de borde que permiten procesar información a bordo.
+
+En la mayoría de aplicaciones civiles, la navegación de un dron depende de sistemas GNSS para estimar su posición global. Esta dependencia es suficiente para tareas de inspección, cartografía o seguimiento de rutas en condiciones normales, pero representa una limitación cuando la señal se degrada, se bloquea o sufre interferencias. En estos casos, disponer de una fuente alternativa de localización puede aumentar la robustez del sistema y permitir operaciones más seguras.
+
+Una de las alternativas más prometedoras es la navegación basada en visión. En lugar de depender únicamente de coordenadas satelitales, el dron puede utilizar imágenes capturadas durante el vuelo y compararlas con una base de datos georreferenciada. Esta idea se conoce como Geolocalización Visual Cruzada o \textit{Cross-View Geo-Localization} (CVGL), ya que compara imágenes tomadas desde puntos de vista diferentes, por ejemplo una cámara embarcada y un mosaico satelital.
+
+\section{Motivación}
+\label{sec:introduccion-motivacion}
+
+La motivación principal del proyecto es construir una plataforma real que permita pasar de la teoría de la geolocalización visual a un banco de pruebas operativo. El interés del trabajo no se limita al algoritmo de visión, sino que incluye la integración completa del sistema: estructura del dron, propulsión, controlador de vuelo, cámara, computadora de borde, comunicaciones, captura de datos y flujo de evaluación.
+
+El uso de un dron construido manualmente permite controlar las decisiones de diseño y comprender las limitaciones prácticas que aparecen en una plataforma ligera: vibraciones, autonomía, distribución de masas, alimentación eléctrica, latencia de captura, carga computacional y fiabilidad de los enlaces de comunicación. Estas limitaciones son especialmente importantes cuando se pretende ejecutar procesamiento visual a bordo.
+
+\section{Problema planteado}
+\label{sec:introduccion-problema}
+
+El problema que aborda este trabajo puede formularse como la integración de un sistema aéreo capaz de capturar imágenes georreferenciadas durante una misión real y utilizar esas imágenes para estimar la posición del dron mediante comparación visual con un mapa de referencia. Para ello es necesario resolver tres subproblemas:
+
+\begin{itemize}
+\item diseñar y ensamblar una plataforma aérea estable y suficientemente capaz para transportar cámara, computadora de borde y comunicaciones;
+\item configurar el controlador de vuelo y el enlace MAVLink para obtener telemetría sincronizada con las imágenes;
+\item preparar un flujo de CVGL que permita comparar los fotogramas de vuelo con una galería satelital y medir el error de localización.
+\end{itemize}
+
+\section{Alcance del trabajo}
+\label{sec:introduccion-alcance}
+
+El alcance inicial del proyecto se centra en la integración y validación experimental de la plataforma. El dron se ha construido a partir de un chasis tipo F450, motores brushless, hélices de 10 pulgadas, batería LiPo 4S, controlador de vuelo H743 con ESC, módulo GPS con brújula, cámara USB de obturador global y una Raspberry Pi 3 B+ como computadora de borde (ver \autoref{fig:dron-general}).
+
+En la versión actual, la Raspberry Pi se utiliza principalmente para capturar imágenes y guardar telemetría asociada. La ejecución completa de la geolocalización visual se plantea inicialmente fuera de bordo, en un ordenador con más capacidad de cálculo, debido a que el procesamiento con descriptores visuales y emparejamiento local resulta demasiado pesado para la Raspberry Pi disponible. Esta decisión permite validar primero la adquisición de datos y el algoritmo de localización antes de abordar una optimización para tiempo real embarcado.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{dron_general_anotado.png}
+\caption{Vista general de la plataforma aérea desarrollada, con los componentes principales señalados: GPS, Raspberry Pi, stack FC/ESC, BEC, batería y cámara.}
+\label{fig:dron-general}
+\end{figure}
+
+\section{Metodología general}
+\label{sec:introduccion-metodologia}
+
+La metodología seguida en el proyecto se estructura en fases. En primer lugar se seleccionan los componentes y se monta la plataforma aérea. A continuación se configura el controlador de vuelo mediante herramientas de estación de tierra, se calibra la electrónica principal y se comprueba la estabilidad del sistema. Después se integra la Raspberry Pi con la cámara y con el flujo de telemetría MAVLink, de forma que cada sesión de vuelo genere un conjunto de imágenes y un archivo CSV con la información temporal y de navegación.
+
+Una vez obtenidos los datos de vuelo, se descarga un mosaico satelital de la zona, se divide en parches georreferenciados y se construye una galería visual. Cada imagen capturada por el dron se compara con esta galería mediante una fase de recuperación global y una fase posterior de emparejamiento local. Finalmente se calcula la posición estimada y se compara con la telemetría GNSS registrada durante el vuelo, que se utiliza como referencia para cuantificar el error.
+
+\section{Estructura de la memoria}
+\label{sec:introduccion-estructura}
+
+La memoria se organiza de la siguiente forma. El \autoref{cap:objetivos-competencias} (\nameref{cap:objetivos-competencias}) recoge los objetivos y competencias asociadas. El \autoref{cap:estado-arte} (\nameref{cap:estado-arte}) resume los conceptos necesarios sobre navegación de drones, MAVLink y geolocalización visual. El \autoref{cap:diseno-sistema} (\nameref{cap:diseno-sistema}) describe la arquitectura general del sistema. Los capítulos \ref{cap:integracion-hardware} (\nameref{cap:integracion-hardware}) y \ref{cap:integracion-software} (\nameref{cap:integracion-software}) detallan la integración física y lógica de la plataforma. El \autoref{cap:geolocalizacion-visual} (\nameref{cap:geolocalizacion-visual}) presenta el flujo de CVGL utilizado. El \autoref{cap:experimentos-resultados} (\nameref{cap:experimentos-resultados}) documenta los vuelos, métricas y resultados obtenidos. El \autoref{cap:planificacion-presupuesto} (\nameref{cap:planificacion-presupuesto}) incluye la planificación y el presupuesto, y por último el \autoref{cap:conclusiones} (\nameref{cap:conclusiones}) recoge las conclusiones y líneas futuras.
+
+% ---------------------------------------------------------------------

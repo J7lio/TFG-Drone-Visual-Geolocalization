@@ -1,0 +1,96 @@
+% ---------------------------------------------------------------------
+% Integración software
+% ---------------------------------------------------------------------
+
+\chapter{Integración software}
+\label{cap:integracion-software}
+
+\begin{Resumen}
+Este capítulo describe la configuración software empleada para operar el dron, registrar datos y mantener acceso remoto. Se detallan las funciones de Mission Planner, QGroundControl, MAVProxy, Tailscale, tmux y el script de captura ejecutado en la Raspberry Pi.
+\end{Resumen}
+
+\section{Herramientas empleadas}
+\label{sec:herramientas-software}
+
+La operación del dron combina varias herramientas. Mission Planner se utiliza para configurar el controlador de vuelo, realizar calibraciones y ajustar parámetros. QGroundControl se emplea para cargar misiones de forma sencilla durante las pruebas. MAVProxy actúa como puente MAVLink entre el controlador de vuelo, la Raspberry Pi y el ordenador de tierra. Tailscale proporciona conectividad remota a través de una red privada, mientras que \texttt{tmux} permite mantener sesiones activas en la Raspberry Pi aunque se produzcan desconexiones.
+
+\section{Enlace MAVLink}
+\label{sec:enlace-mavlink}
+
+El controlador de vuelo se conecta a la Raspberry Pi (\autoref{sec:conexiones-electricas-datos}) y expone telemetría MAVLink. MAVProxy se ejecuta en la Raspberry Pi para recibir los mensajes del controlador por dicha conexión serie y reenviarlos al ordenador de tierra mediante UDP, a través de la red Tailscale (\autoref{sec:que-es-tailscale}).
+
+\begin{lstlisting}[language=bash,caption={Estructura del comando de reenvío MAVLink con MAVProxy.},label={lst:mavproxy}]
+mavproxy.py --master=PUERTO_CONTROLADOR --baudrate 115200 \
+  --out=udp:IP_PC_TAILSCALE:14550
+\end{lstlisting}
+
+\noindent donde \texttt{PUERTO\_CONTROLADOR} es el dispositivo serie de la Raspberry Pi conectado a la FC, e \texttt{IP\_PC\_TAILSCALE} es la dirección IP que Tailscale asigna al ordenador de tierra dentro de la red privada.
+
+En el ordenador de tierra se puede abrir la estación de control escuchando el puerto UDP configurado. Esto permite visualizar telemetría durante el vuelo y facilita la depuración del sistema.
+
+\section{Acceso remoto y ejecución persistente}
+\label{sec:acceso-remoto}
+
+\subsection{Tailscale}
+\label{sec:que-es-tailscale}
+
+Tailscale es una red privada virtual (VPN) de tipo \textit{mesh} basada en WireGuard: conecta directamente entre sí los dispositivos que forman parte de la misma red (aquí, la Raspberry Pi y el ordenador de tierra), asignándoles una dirección IP privada estable, sin necesidad de configurar manualmente un servidor VPN propio ni de abrir puertos en el router. Esto resuelve un problema concreto de este proyecto: la Raspberry Pi se conecta a internet mediante un dongle LTE, y los operadores móviles habitualmente ponen a sus clientes detrás de NAT de operador (CGNAT), por lo que la Raspberry Pi no tiene una IP pública alcanzable directamente desde el ordenador de tierra. Tailscale resuelve esto estableciendo la conexión mediante técnicas de \textit{NAT traversal} y, si no es posible una conexión directa, retransmitiendo el tráfico a través de sus propios servidores \parencite{tailscale_docs}. El resultado práctico es que, mientras la Raspberry Pi tenga cualquier tipo de acceso a internet (LTE en este caso), puede alcanzarse por SSH desde el ordenador de tierra como si estuviera en la misma red local, sin depender de la red WiFi del punto de despegue ni de configuración de red adicional.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{camino_datos.png}
+\caption{Camino de datos de telemetría desde la FC hasta el ordenador de tierra: MAVLink por UART hasta la Raspberry Pi, dongle LTE conectado por USB, red Tailscale y QGroundControl en el ordenador de tierra.}
+\label{fig:diagrama-tailscale}
+\end{figure}
+
+\subsection{Sesiones persistentes con \texttt{tmux}}
+\label{sec:que-es-tmux}
+
+\texttt{tmux} es un multiplexor de terminal: permite abrir una o varias sesiones de terminal en la Raspberry Pi que siguen ejecutándose en segundo plano aunque se cierre la conexión SSH que las inició, y a las que se puede volver a acceder (\textit{reattach}) desde una conexión SSH posterior. Esto es importante porque, dependiendo de las condiciones de cobertura LTE durante un vuelo, es previsible sufrir cortes de conexión puntuales; sin \texttt{tmux}, una desconexión SSH mataría el proceso de captura (\texttt{capturar\_vuelo.py}) que se estuviera ejecutando en esa terminal, perdiendo la sesión de datos en pleno vuelo. Con el proceso de captura lanzado dentro de una sesión de \texttt{tmux}, un corte de conexión no interrumpe la captura: el proceso sigue escribiendo imágenes y telemetría en la Raspberry Pi, y basta con volver a conectar por SSH y reengancharse a la sesión (\texttt{tmux attach}) para recuperar el control y comprobar el progreso.
+
+\section{Captura de imágenes y telemetría}
+\label{sec:captura-imagenes-telemetria}
+
+El script \texttt{capturar\_vuelo.py} implementa la captura de datos a bordo. La configuración actual establece una conexión MAVLink por UDP local, captura un fotograma cada \SI{0.5}{\second} y guarda los resultados en una carpeta de sesión. Cada sesión contiene imágenes PNG y un archivo \texttt{telemetria.csv} con el instante de captura y las variables de navegación asociadas.
+
+\subsection{Problema de desincronización y solución con hilos independientes}
+\label{sec:problema-sincronizacion-hilos}
+
+\textbf{Problema.} En una primera versión del script de captura, la lectura del fotograma de la cámara, la lectura de la telemetría MAVLink más reciente y la escritura a disco de ambos se realizaban de forma secuencial dentro de un único bucle principal. Cuando alguna de estas operaciones tardaba más de lo esperado —en particular, la escritura de la imagen a disco—, el resto del bucle se bloqueaba esperando a que terminara, lo que introducía un retraso variable entre iteraciones. Este retraso se traducía en un desfase creciente entre el instante real de captura de cada fotograma y el instante de la fila de telemetría que se le asociaba en el CSV, un problema que se agrava con cada iteración porque el retraso se va acumulando en vez de mantenerse constante.
+
+\textbf{Diagnóstico.} El bucle único obligaba a que la operación más lenta (escritura a disco) determinase el ritmo de todas las demás, incluida la lectura de telemetría, que en realidad no tiene motivo para depender de cuánto tarde en escribirse la imagen anterior.
+
+\textbf{Solución.} Se separó la captura en dos hilos independientes que se ejecutan de forma concurrente: un hilo dedicado exclusivamente a leer fotogramas de la cámara y mantener siempre disponible el más reciente, y otro hilo dedicado exclusivamente a escuchar mensajes MAVLink y mantener actualizada la última telemetría recibida. El bucle principal ya no realiza directamente ninguna de las dos lecturas: en cada iteración toma el fotograma más reciente que tenga preparado el hilo de cámara, copia en el mismo instante la telemetría más reciente que tenga preparado el hilo de MAVLink, y escribe ambos a disco. De este modo, una escritura a disco lenta ya no retrasa la lectura de los siguientes fotogramas ni de la siguiente telemetría —que siguen actualizándose en sus propios hilos mientras tanto—, y el emparejamiento entre imagen y telemetría en el CSV final corresponde al mismo instante real, no a instantes progresivamente desincronizados.
+
+\begin{table}[htbp]
+\centering
+\caption{Campos registrados por el script de captura.}
+\label{tab:campos-telemetria}
+\begin{tabularx}{\textwidth}{p{0.30\textwidth}X}
+\toprule
+\textbf{Campo} & \textbf{Descripción} \\
+\midrule
+\texttt{Timestamp} & Marca temporal usada para asociar imagen y fila de telemetría. \\
+\texttt{Archivo\_Frame} & Nombre del archivo PNG guardado. \\
+\texttt{Pitch}, \texttt{Roll}, \texttt{Yaw} & Actitud estimada por el controlador de vuelo. \\
+\texttt{Rumbo\_Norte} & Rumbo magnético de la aeronave. \\
+\texttt{Latitud}, \texttt{Longitud} & Coordenadas GNSS registradas durante el vuelo. \\
+\texttt{Alt\_Relativa} & Altura relativa respecto al punto de despegue. \\
+\texttt{Alt\_AMSL} & Altitud sobre el nivel medio del mar. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Organización de los datos}
+\label{sec:organizacion-datos}
+
+Cada ejecución de \texttt{capturar\_vuelo.py} genera una carpeta independiente dentro del directorio de vuelos, nombrada con la fecha y hora de inicio de la sesión (por ejemplo, \texttt{vuelo\_20260716\_095840} para el vuelo de validación del \autoref{cap:experimentos-resultados}). Esta organización evita mezclar datos de distintas sesiones y facilita reproducir los experimentos sobre un vuelo concreto sin ambigüedad.
+
+Dentro de cada carpeta de vuelo se guardan dos elementos: los fotogramas capturados, como archivos PNG nombrados con su marca temporal (\texttt{frame\_AAAAMMDD\_HHMMSS\_mmm.png}), y un único archivo \texttt{telemetria.csv} con una fila por fotograma capturado, que registra el nombre de archivo del fotograma junto con los campos descritos en la \autoref{tab:campos-telemetria} para ese mismo instante. Esta carpeta de vuelo, copiada íntegra al ordenador de procesado, es la única entrada que necesita el pipeline de geolocalización visual (\autoref{cap:geolocalizacion-visual}): a partir de ella se generan las consultas normalizadas y se evalúa el pipeline sin necesidad de ningún otro archivo de la sesión.
+
+\section{Limitaciones actuales}
+\label{sec:limitaciones-software}
+
+La limitación principal observada es la carga computacional de la geolocalización visual. La Raspberry Pi resulta adecuada para captura y registro, pero ejecutar a bordo el pipeline completo con el descriptor VLAD+DINOv3-SAT, búsqueda en galería y emparejamiento LoFTR no es viable en la configuración actual. Por ello, la arquitectura separa la adquisición de datos en vuelo de la evaluación CVGL en un ordenador externo.
+
+% ---------------------------------------------------------------------

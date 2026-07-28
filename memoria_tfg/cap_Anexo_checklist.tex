@@ -1,0 +1,54 @@
+% ---------------------------------------------------------------------
+% Anexo de checklist
+% ---------------------------------------------------------------------
+
+\chapter{Lista de comprobación para vuelos de prueba}
+\label{cap:anexo-checklist}
+
+Este anexo propone una lista de comprobación operativa para las pruebas de vuelo, junto con las consideraciones normativas que se han tenido en cuenta para la zona empleada en el vuelo de validación del \autoref{cap:experimentos-resultados}.
+
+\section{Normativa aplicable y autorización de la zona de vuelo}
+\label{sec:normativa-vuelo}
+
+En España, la normativa de referencia para operaciones con aeronaves no tripuladas de uso civil es el marco europeo EASA (Reglamentos (UE) 2019/947 y 2019/945), complementado por la normativa nacional de AESA. Dicho marco divide la categoría Abierta en tres subcategorías (A1, A2 y A3) según la masa máxima al despegue de la aeronave, si dispone de marcado de clase CE, y las distancias de seguridad respecto a personas que se pueden garantizar durante el vuelo.
+
+El dron de este proyecto es de construcción privada (no dispone de marcado de clase CE) y tiene una masa al despegue superior a \SI{250}{\gram} e inferior a \SI{25}{\kilo\gram}. Según la tabla de subcategorías del Reglamento (UE) 2019/947, esta combinación —construcción privada y masa en dicho rango— sitúa la operación en la \textbf{subcategoría A3}, que exige volar alejado de personas y de zonas urbanas o residenciales. Para el vuelo de validación del \autoref{cap:experimentos-resultados} se cumplieron los requisitos correspondientes a esta subcategoría: se respetó el límite de altura de \SI{120}{\metre} sobre el nivel del suelo, la zona de vuelo se comprobó libre de restricciones aéreas, y se mantuvo alejada de núcleos urbanos y de cualquier otra zona no permitida por la normativa general.
+
+Con independencia de la subcategoría operacional, la normativa exige además que el operador esté dado de alta como operador UAS ante AESA, que el piloto remoto disponga del certificado de competencia correspondiente (curso y examen de la subcategoría A1/A3), y que la operación esté cubierta por un seguro de responsabilidad civil. Estos tres requisitos se cumplieron antes del vuelo de validación del \autoref{cap:experimentos-resultados}.
+
+\section{Antes de conectar la batería}
+\label{sec:checklist-antes-bateria}
+
+\begin{itemize}
+\item Revisar estructura, tornillos, brazos y tren de aterrizaje.
+\item Comprobar que las hélices no presentan grietas o deformaciones.
+\item Verificar que la cámara y la Raspberry Pi están correctamente fijadas.
+\item Confirmar que la batería está cargada y en buen estado.
+\item Revisar que no hay cables cerca de hélices o partes móviles.
+\end{itemize}
+
+\section{Antes de armar}
+\label{sec:checklist-antes-armar}
+
+\begin{itemize}
+\item Comprobar recepción de GPS y brújula en la estación de tierra.
+\item Verificar tensión de batería y ausencia de alarmas críticas.
+\item Confirmar conexión Tailscale y acceso a la Raspberry Pi.
+\item Iniciar sesión \texttt{tmux} y lanzar el proceso de captura.
+\item Confirmar que se guardan imágenes y filas en \texttt{telemetria.csv}.
+\item Revisar la misión cargada en QGroundControl.
+\end{itemize}
+
+\section{Después del vuelo}
+\label{sec:checklist-despues-vuelo}
+
+\begin{itemize}
+\item Desarmar el dron y desconectar la batería.
+\item Copiar la carpeta de vuelo al ordenador de procesado.
+\item Revisar número de imágenes, tamaño de archivos y continuidad temporal.
+\item Abrir el CSV para comprobar que la telemetría contiene valores coherentes.
+\item Anotar incidencias de vuelo, condiciones de iluminación y observaciones.
+\item Ejecutar una prueba rápida del pipeline CVGL sobre algunos frames representativos.
+\end{itemize}
+
+% ---------------------------------------------------------------------

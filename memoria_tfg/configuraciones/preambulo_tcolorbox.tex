@@ -1,0 +1,98 @@
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+
+\newcommand{\FuenteEjemplos}{\small}
+
+% ---------------------------------------------------------------------
+% ---------------------------------------------------------------------
+% Teoremas y ejemplos
+
+\usepackage[most]{tcolorbox}
+
+
+% ---------------------------------------------------------------------
+% Ejemplo
+
+\definecolor{colorFonsExemples}{rgb}{0.95,0.95,0.95}
+\colorlet{colorFonsCapcaleraExemples}{black!65!white}
+
+\newtcbtheorem[
+	auto counter,
+	number within = section,
+	]{texemple}{Ejemplo}{
+		enhanced jigsaw,
+		breakable,
+		pad at break* = 1mm,
+		arc = 0.0mm,
+		%
+		sharpish corners,
+		leftrule = 0pt, rightrule = 0pt,
+		bottomrule = 0pt, toprule = 0pt,
+		% borderline={0.4pt}{0pt}{black},
+		% left=.5em,right=.5em,top=1ex,bottom=1ex, 
+		%
+		colback = colorFonsExemples,
+		colframe = colorFonsExemples,
+		description color = white,
+		coltitle = white,
+		colbacktitle = colorFonsCapcaleraExemples,
+		fonttitle = \bfseries\sffamily\upshape\FuenteEjemplos,
+		fontupper = \FuenteEjemplos,
+		toptitle = 0.45ex, bottomtitle = 0.25ex,
+		before skip = 4ex, after skip = 4ex,
+		}{ejemplo}
+
+\newenvironment{Ejemplo}[2]
+	{
+	\begin{texemple}{#1}{#2}
+	\parskip = \separaParrafos % \separaParrafos está definido en la plantilla
+	\parindent = \indentaParrafos % \indentaParrafos está definido en la plantilla
+	% Per a les equacions normals
+	\abovedisplayshortskip = -1.0ex plus 0ex minus 0.25ex
+	\belowdisplayshortskip = 2.0ex plus 1ex minus 0.0ex	
+	% Per a les equacions en varies l?nies
+	\abovedisplayskip = -1.0ex plus 0ex minus 0.25ex
+	\belowdisplayskip = 2.0ex plus 1ex minus 0.0ex
+	}
+	{
+	\end{texemple}
+	}
+
+\newenvironment{enunciadoEjercicio}{\itshape}{} %\slshape
+
+\newcommand{\finEjemplo}[1]{%
+	\vspace{1ex}
+	\begin{flushright}
+		\slshape\FuenteEjemplos
+		{Fin del ejemplo} \ref{ejemplo:#1}
+		\hspace{1em}\textcolor{colorFonsCapcaleraExemples}{$\blacksquare$}
+	\end{flushright}
+	%
+	\vspace{-1ex}
+	}
+
+		
+% ---------------------------------------------------------------------
+% Zona Grisa
+
+% \makeatletter
+% \newenvironment{zonaGrisa}{\begin{tcolorbox}[
+% 		width = \textwidth-\@totalleftmargin,
+% 		%left skip = .1\textwidth,
+% 		enhanced jigsaw,
+% 		sharpish corners,
+% 		breakable,
+% 		boxrule=0pt,
+% 		leftrule = 0pt, rightrule = 0pt,
+% 		left=1em,right=1em,top=3ex,bottom=1ex, 
+% 		bottomrule=0pt,toprule=0pt,
+% 		%borderline={0.0pt}{0pt}{black},
+% 		colback=colorFonsSolucions,
+% 		colframe=colorMarcSolucions,
+% 		coltitle = black,
+% 		fonttitle=\bfseries\upshape, %\scshape
+% 		fontupper = \SelectFont\selectfont,
+% 		before skip = 0ex, after skip = 4ex,
+% 		]\parskip = 2ex}{\end{tcolorbox}}
+% \makeatother		
+

@@ -1,0 +1,75 @@
+% ---------------------------------------------------------------------
+% Diseño general del sistema
+% ---------------------------------------------------------------------
+
+\chapter{Diseño general del sistema}
+\label{cap:diseno-sistema}
+
+\begin{Resumen}
+Este capítulo describe la arquitectura global del sistema desarrollado. Se identifican los bloques funcionales, los componentes seleccionados y los flujos de energía, datos y control que permiten convertir el dron en un banco de pruebas para navegación visual.
+\end{Resumen}
+
+\section{Arquitectura funcional}
+\label{sec:arquitectura-funcional}
+
+El sistema se divide en seis bloques funcionales, cada uno con una responsabilidad delimitada:
+
+\begin{description}
+\item[Plataforma mecánica.] Estructura física del dron: chasis, brazos y tren de aterrizaje, junto con las piezas impresas en 3D diseñadas a medida para fijar el resto de componentes sobre ella (\autoref{sec:modelos-3d}).
+\item[Propulsión.] Motores brushless y hélices; generan el empuje necesario para el vuelo.
+\item[Alimentación.] Distribuye la energía de la batería principal en dos líneas separadas: una directa hacia el ESC y los motores, y otra regulada mediante un BEC hacia la electrónica auxiliar (\autoref{sec:flujo-energia}).
+\item[Control de vuelo.] El controlador de vuelo (FC) estabiliza la aeronave, ejecuta la misión y centraliza la lectura de los sensores de navegación (GPS, brújula, IMU).
+\item[Percepción.] Cámara USB conectada a la Raspberry Pi; captura las imágenes que usa el pipeline de geolocalización visual (\autoref{cap:geolocalizacion-visual}).
+\item[Comunicaciones.] Dongle LTE combinado con Tailscale (\autoref{sec:que-es-tailscale}); permite monitorizar el sistema y acceder de forma remota a la Raspberry Pi durante las pruebas de vuelo.
+\end{description}
+
+Estos bloques se relacionan entre sí mediante dos flujos independientes, detallados en las siguientes secciones: el flujo de energía (\autoref{sec:flujo-energia}), que reparte la potencia de la batería entre propulsión y electrónica auxiliar, y el flujo de datos (\autoref{sec:flujo-datos}), que lleva la telemetría del controlador de vuelo y las imágenes de la cámara desde la Raspberry Pi hasta el ordenador de procesado.
+
+\section{Componentes principales}
+\label{sec:componentes-principales}
+
+La \autoref{tab:componentes} resume los componentes utilizados en la plataforma. Los nombres se mantienen cercanos a la denominación comercial para facilitar su trazabilidad durante la redacción final.
+
+\begin{longtable}{p{0.28\textwidth}p{0.30\textwidth}p{0.34\textwidth}}
+\caption{Componentes principales del sistema.}\label{tab:componentes}\\
+\toprule
+\textbf{Bloque} & \textbf{Componente} & \textbf{Función} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Bloque} & \textbf{Componente} & \textbf{Función} \\
+\midrule
+\endhead
+Estructura & Chasis F450 negro con tren de aterrizaje & Soporte mecánico de la plataforma cuadricóptero. \\
+Propulsión & Motores brushless Readytosky 2212 920KV & Generación de empuje en cada brazo del dron. \\
+Propulsión & Hélices 1045 de 10x4,5 pulgadas CW/CCW & Conversión del par de los motores en empuje vertical. \\
+Alimentación & Batería LiPo 4S 5200 mAh 60C con conector XT60 & Fuente principal de energía del sistema. \\
+Alimentación & BEC QITN ajustable 6--60 V a 5/9/12 V & Regulación de tensión para electrónica auxiliar. \\
+Control & Stack H743 6S con ESC de 55 A & Controlador de vuelo y etapa de potencia para motores. \\
+Navegación & Módulo GPS M10 10 Hz con brújula & Posicionamiento GNSS y referencia de rumbo. \\
+Seguridad & Receptor de radiocontrol FlySky FS-i6X & Permite tomar el control manual del dron durante la misión ante un comportamiento anómalo o para cancelar el vuelo. \\
+Percepción & Cámara USB Svpro 2 MP global shutter AR0234 & Captura de imágenes para geolocalización visual. \\
+Procesamiento & Raspberry Pi & Captura, almacenamiento de datos, telemetría y acceso remoto. \\
+Comunicaciones & Dongle LTE y Tailscale & Enlace remoto para monitorización y acceso al sistema. \\
+Aislamiento & Placa antivibración de fibra de carbono & Reducción de vibraciones en cámara o elementos sensibles. \\
+\bottomrule
+\end{longtable}
+
+\section{Flujo de energía}
+\label{sec:flujo-energia}
+
+La batería LiPo 4S alimenta el sistema principal de potencia. Desde esta fuente se suministra energía al ESC integrado en el stack para accionar los motores. La electrónica auxiliar requiere tensiones reguladas, por lo que se utiliza un BEC ajustable para alimentar los dispositivos que no pueden conectarse directamente a la batería principal. Esta separación evita someter la Raspberry Pi, la cámara y otros periféricos a tensiones o ruidos eléctricos no adecuados.
+
+\section{Flujo de datos}
+\label{sec:flujo-datos}
+
+El controlador de vuelo genera telemetría MAVLink con información de actitud, altitud, posición y rumbo. Esta telemetría se reenvía mediante MAVProxy hacia el ordenador de tierra y hacia la Raspberry Pi. La cámara USB envía imágenes a la Raspberry Pi, donde se almacenan junto con un archivo CSV de telemetría sincronizada. Posteriormente, los datos se transfieren al ordenador de procesado para ejecutar el pipeline de CVGL.
+
+\section{Decisiones de diseño}
+\label{sec:decisiones-diseno}
+
+Se ha optado por una arquitectura modular para facilitar la depuración. El controlador de vuelo mantiene la responsabilidad de estabilización y seguridad, mientras que la Raspberry Pi se encarga de tareas no críticas como captura, registro y comunicaciones. Esta separación reduce el riesgo de que una sobrecarga de procesamiento visual afecte al control de vuelo.
+
+La ejecución de la geolocalización visual se deja inicialmente fuera de bordo. Esta decisión responde a la carga computacional de los modelos de visión empleados y permite validar el flujo completo con imágenes reales antes de optimizarlo. Una futura versión podría sustituir la Raspberry Pi por una computadora con aceleración GPU o adaptar los modelos para inferencia ligera.
+
+% ---------------------------------------------------------------------

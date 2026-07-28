@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------------
+# Entornos y editor
+# ---------------------------------------------------------------------
+.venv/
+.idea/
+__pycache__/
+*.pyc
+
+# ---------------------------------------------------------------------
+# DINOv3: repo clonado y pesos (ver README para descargarlos aparte)
+# ---------------------------------------------------------------------
+dinov3_repo/
+dinov3_weights/
+
+# ---------------------------------------------------------------------
+# Datos de vuelo reales (demasiado pesados para git, ver README)
+# ---------------------------------------------------------------------
+codigos_dron/vuelos/
+codigos_final/principal/vuelo_20260716_095840/
+
+# ---------------------------------------------------------------------
+# Artefactos regenerables del pipeline CVGL (ejecutar los scripts
+# numerados para reconstruirlos, ver README)
+# ---------------------------------------------------------------------
+codigos_final/principal/basemap.tif
+codigos_final/principal/gallery_tiles/
+codigos_final/principal/queries_normalizadas_completo/
+codigos_final/principal/*.npz
+codigos_final/principal/*.npy
+
+# Contienen coordenadas GPS reales de la zona de vuelo (lat/lon por fila)
+codigos_final/principal/gallery_index.csv
+codigos_final/principal/queries_index_completo.csv
+codigos_final/principal/resultados_vuelo_completo.csv
+
+# ---------------------------------------------------------------------
+# Scripts de experimentación/prototipos, no publicados (ver README);
+# se quedan en el disco, disponibles bajo petición.
+# ---------------------------------------------------------------------
+pruebas/
+
+# ---------------------------------------------------------------------
+# Instantánea vieja y superada del pipeline (nombres antiguos de scripts,
+# ya sustituida por codigos_final/ y codigos_dron/), y logs sueltos de
+# compilación LaTeX fuera de memoria_tfg/.
+# ---------------------------------------------------------------------
+memoria_tfg/prism-uploads/
+out/
+
+# ---------------------------------------------------------------------
+# Artefactos de compilación LaTeX (se mantienen .tex, .bib, .cls y el PDF final)
+# ---------------------------------------------------------------------
+memoria_tfg/*.aux
+memoria_tfg/*.bbl
+memoria_tfg/*.bcf
+memoria_tfg/*.blg
+memoria_tfg/*.idx
+memoria_tfg/*.ilg
+memoria_tfg/*.ind
+memoria_tfg/*.lof
+memoria_tfg/*.lot
+memoria_tfg/*.log
+memoria_tfg/*.out
+memoria_tfg/*.run.xml
+memoria_tfg/*.toc
+memoria_tfg/*.synctex.gz

@@ -1,0 +1,85 @@
+\usepackage{listings}
+
+% \lstset{deletekeywords=[1]{structure}}
+
+\lstset{
+	language=[LaTeX]TeX,
+	basicstyle=\fontsize{10.5pt}{12.5pt}\selectfont\ttfamily,         
+	identifierstyle=,           
+	commentstyle=\color[rgb]{.5,.5,.5},
+	stringstyle=\color[rgb]{0,.5,0},
+	tabsize=4,
+	backgroundcolor = \color[rgb]{.96,.96,.96},
+	rulecolor = \color[rgb]{.96,.96,.96},
+	frame=single,
+	framesep = 9pt,
+	xleftmargin= 9pt,
+	xrightmargin= 9pt,			
+	classoffset=0,
+	morekeywords={
+		comando, marcaseccion, href,
+		maketitle,
+		signature, address, opening, closing, encl,
+		appendix, include, includeonly, input,
+		titlelabel, titleformat, thetitle, titlecontents, thecontentslabel, phantomsection, 
+		addstarredchapter,
+		nameref, indexIngles, printindex, 
+		contentspage, titlerule, tableofcontents,
+		dominitoc, minitoc,
+		citet, citep, citeauthor, citeyear,
+		sffamily, Large, familydefault, sfdefault,
+		geometry, newgeometry, restoregeometry,
+		autoref, nouppercase,
+		tablename, figurename,contentsname,chaptername, bibname,
+		colorlet,
+		columncolor, rowcolor, ctable, LL, FL, ML, NN,
+		toprule, midrule, cmidrule, arraybackslash, bottomrule, newcolumntype,
+		chaptermark, thechapter,
+		anchoPapel, margenInterior, ingles, comandoNuevo, SAC, SACs, todoDestacado, todoNormal,
+		xspace, destacado, espacio, longLinea,
+		labelitemi, labelitemii, labelitemiii, labelitemiv,
+		labelenumi, labelenumii, labelenumiii, labelenumiv,
+		mathcal,
+		listoftables, listoffigures,
+		columnbreak, clearpage,
+		graphicspath, totalnumber, rotatebox, scalebox, resizebox, captionfo, subfloat,
+		bottomnumber, topnumber,
+		fbox, framebox, fcolorbox, colorbox, shadowbox, doublebox, ovalbox, Ovalbox, shadowsize,
+		cornersize,
+		setlength, floatstyle, newfloat, floatname, endfoot, endlastfood, endhead, endfirsthead,
+		dfrac, tfrac, sen, tg, dif, overset, underset, text, eqref, nolimits,
+		numberwithin, SI, si, num, euro, EURO, finEjemplo,
+		pascal, kelvin, kilo, metre, meter, square, percent, kilogram, kilometre, per, second, hour, newton, volt, micro, centi, Picture,
+		theoremstyle, theoremheaderfont, theorembodyfont,
+		includeonlyframes, frametitle, framesubtitle, mode, usetheme, usecolortheme, usefonttheme,
+		useinnertheme, useoutertheme, note, setbeameroption, pgfpagesuselayout, pause, alert,
+		structure, only, onslide, visible, invisible, uncover, alt, temporal, column, setlist,
+		ifEBOOKPDF, ifenglish, encabezadoPaginaImpar, Titulo, Alumnoa, Tutores, Titulacion, Convocatoria		
+		},
+	keywordstyle=\color[rgb]{.45,.00,.00},
+	classoffset=1,
+	morekeywords={
+		begin,
+		end,
+		chapter, section, subsection, part, includegraphics,
+		chapter*, section*, subsection*,
+		subsubsection, paragraph, subparagraph,
+		},
+	keywordstyle=\color{blue},
+	classoffset=0,
+	texcsstyle=*[0],  % Fa que la contrabarra estiga formatejada també
+	}
+	
+	
+\lstset{literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{à}{{\`a}}1 {è}{{\`e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1 {ù}{{\`u}}1
+	{À}{{\`A}}1 {È}{{\'E}}1 {Ì}{{\`I}}1 {Ò}{{\`O}}1 {Ù}{{\`U}}1
+	{ä}{{\"a}}1 {ë}{{\"e}}1 {ï}{{\"i}}1 {ö}{{\"o}}1 {ü}{{\"u}}1
+	{Ä}{{\"A}}1 {Ë}{{\"E}}1 {Ï}{{\"I}}1 {Ö}{{\"O}}1 {Ü}{{\"U}}1
+	{â}{{\^a}}1 {ê}{{\^e}}1 {î}{{\^i}}1 {ô}{{\^o}}1 {û}{{\^u}}1
+	{Â}{{\^A}}1 {Ê}{{\^E}}1 {Î}{{\^I}}1 {Ô}{{\^O}}1 {Û}{{\^U}}1
+	{Ã}{{\~A}}1 {ã}{{\~a}}1 {Õ}{{\~O}}1 {õ}{{\~o}}1
+	{ñ}{{\~n}}1
+ }

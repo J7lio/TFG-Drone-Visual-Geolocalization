@@ -1,0 +1,221 @@
+% ---------------------------------------------------------------------
+% Integración hardware
+% ---------------------------------------------------------------------
+
+\chapter{Integración hardware}
+\label{cap:integracion-hardware}
+
+\begin{Resumen}
+Este capítulo documenta el montaje físico y eléctrico de la plataforma. Se describen la estructura, el sistema de propulsión, la alimentación, el controlador de vuelo, el módulo de navegación, la cámara y la computadora de borde.
+\end{Resumen}
+
+\section{Montaje de la estructura}
+\label{sec:montaje-estructura}
+
+La plataforma se basa en un chasis tipo F450, adecuado para un cuadricóptero de tamaño medio. Este formato ofrece suficiente espacio para distribuir la batería, el controlador de vuelo, el GPS, la Raspberry Pi y el sistema de cámara, manteniendo una estructura relativamente sencilla de montar y reparar.
+
+Durante el montaje se debe prestar especial atención a la orientación de los brazos, el sentido de giro de cada motor, la fijación de las hélices y la ubicación del centro de gravedad (Figuras \ref{fig:vista-planta-helices} y \ref{fig:vista-lateral}). Una distribución equilibrada reduce el esfuerzo de control y mejora la estabilidad durante el vuelo.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{vista_planta_helices.png}
+\caption{Vista en planta: sentido de giro de cada motor (brazos rojos y brazos grises giran en sentidos opuestos, configuración en X).}
+\label{fig:vista-planta-helices}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{vista_lateral.png}
+\caption{Vista lateral: distribución de las piezas sobre el chasis, con la batería montada bajo el mismo.}
+\label{fig:vista-lateral}
+\end{minipage}
+\end{figure}
+
+\subsection{Peso y ubicación de la batería}
+\label{sec:peso-bateria}
+
+La batería es, con diferencia, el componente más pesado de toda la plataforma: el dron completo sin batería pesa \SI{980}{\gram}, mientras que la batería por sí sola pesa \SI{390}{\gram} —cerca del 28\,\% del peso total del conjunto ya con batería (\SI{1370}{\gram})—. Por este motivo, su ubicación es una de las decisiones de diseño más importantes para la estabilidad de vuelo: se ha montado bajo el chasis, no sobre él (visible en la \autoref{fig:vista-lateral}), lo que baja el centro de gravedad del conjunto y evita los problemas de estabilidad que aparecerían si se montara en una posición más alta, con la mayor parte del peso concentrado por encima del plano de los motores.
+
+\section{Modelos 3D y piezas impresas}
+\label{sec:modelos-3d}
+
+Se partió de un modelo 3D base del dron ya existente, con el chasis F450 y los motores, sobre el cual se modelaron los seis componentes principales que había que integrar (\autoref{fig:modelo3d-componentes}): la batería, la placa antivibración, la Raspberry Pi (con su caja), el stack FC/ESC, la cámara y el módulo GPS. Ninguno de estos componentes estaba pensado de fábrica para fijarse directamente al chasis F450, por lo que fue necesario diseñar e imprimir en 3D piezas adaptadoras específicas para cada uno (\autoref{fig:piezas-impresas-adaptadores}): tres adaptadores para la fijación de la cámara, una torre elevadora para el GPS —que resuelve el problema de proximidad descrito en la \autoref{sec:problema-gps-proximidad}— y un adaptador para fijar el stack FC/ESC al chasis. Estas piezas ya son visibles, montadas, en la fotografía general del dron de la \autoref{fig:dron-general}.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{modelo3d_componentes.png}
+\caption{Componentes principales modelados en 3D: 1) batería, 2) placa antivibración, 3) Raspberry Pi (con caja), 4) stack FC/ESC, 5) cámara, 6) módulo GPS.}
+\label{fig:modelo3d-componentes}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{piezas_impresas_adaptadores.png}
+\caption{Piezas diseñadas e impresas en 3D para fijar los componentes al chasis: 1--3) adaptadores de la cámara, 4) torre elevadora del GPS, 5) adaptador del stack FC/ESC al chasis.}
+\label{fig:piezas-impresas-adaptadores}
+\end{minipage}
+\end{figure}
+
+\section{Sistema de propulsión}
+\label{sec:sistema-propulsion}
+
+El sistema de propulsión está formado por cuatro motores brushless 2212 de 920KV y hélices 1045 CW/CCW. La combinación de motores, hélices y batería 4S debe proporcionar empuje suficiente para elevar la plataforma con la carga adicional de cámara, Raspberry Pi y comunicaciones.
+
+Antes de instalar las hélices se recomienda comprobar individualmente el sentido de giro de cada motor desde la estación de tierra. Esta prueba reduce el riesgo de vuelco durante el primer armado. Las hélices deben instalarse únicamente después de verificar el orden de motores y realizar las pruebas de seguridad necesarias.
+
+\section{Alimentación eléctrica}
+\label{sec:alimentacion-electrica}
+
+La batería principal es una LiPo 4S de \SI{5200}{\milli\ampere\hour} y descarga 60C. La tensión nominal del conjunto es de \SI{14.8}{\volt}. El stack de control y ESC se alimenta desde la batería principal, mientras que la electrónica auxiliar requiere una línea regulada. Para ello se incorpora un BEC ajustable capaz de entregar tensiones de 5, 9 o \SI{12}{\volt} según la configuración seleccionada.
+
+La \autoref{fig:alimentacion-dron} esquematiza esta ruta de alimentación, indicando los conectores, la masa común y la tensión usada por cada dispositivo.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{circuito_electrico.png}
+\caption{Distribución de alimentación eléctrica y de datos del dron: batería, ESC/motores, BEC, controlador de vuelo (FC), Raspberry Pi, GPS/brújula y cámara.}
+\label{fig:alimentacion-dron}
+\end{figure}
+
+\section{Controlador de vuelo y sensores}
+\label{sec:controlador-sensores}
+
+El controlador de vuelo utilizado es un stack H743 6S con ESC de 55 A. Este elemento centraliza la lectura de sensores, la estabilización de la aeronave y la generación de señales de control para los motores. El módulo GPS M10 con brújula proporciona posición global y rumbo magnético, información utilizada tanto por el controlador de vuelo como por el registro de datos.
+
+La instalación del GPS debe realizarse alejada de fuentes de interferencia electromagnética, especialmente cables de potencia y reguladores. La orientación física del módulo debe coincidir con la configuración establecida en el firmware para evitar errores de rumbo.
+
+El dron incorpora además un receptor de radiocontrol FlySky FS-i6X, conectado a la FC junto al resto de periféricos (\autoref{sec:conexiones-electricas-datos}). Aunque la misión se ejecuta de forma autónoma mediante los \textit{waypoints} cargados en el controlador de vuelo, el receptor se mantiene activo durante todo el vuelo como mecanismo de seguridad: permite tomar el control manual del dron en cualquier momento con la emisora asociada, tanto para corregir un comportamiento anómalo como para cancelar la misión y aterrizar de forma controlada.
+
+\section{Cámara y montaje antivibración}
+\label{sec:camara-montaje}
+
+La cámara seleccionada es una Svpro USB de 2 MP con sensor AR0234, obturador global, resolución de 1920x1200 píxeles y lente gran angular. Para mejorar la calidad de las imágenes se incorpora una placa antivibración de fibra de carbono. La orientación de la cámara debe documentarse con precisión, ya que afecta a la interpretación geométrica de las imágenes y al emparejamiento con el mosaico satelital.
+
+\subsection{Obturador global frente a obturador rodante}
+\label{sec:global-vs-rolling-shutter}
+
+La elección de un sensor de \textbf{obturador global} (\textit{global shutter}) frente a uno de \textbf{obturador rodante} (\textit{rolling shutter}) no es indiferente en una plataforma en movimiento. Un sensor de obturador rodante expone cada fila de píxeles en un instante ligeramente distinto, escaneando la imagen de arriba a abajo en vez de capturar el fotograma completo de forma simultánea. Si la cámara (o la escena) se mueve apreciablemente durante ese barrido —como ocurre en un dron, donde a la traslación se suman las vibraciones de los motores y las hélices—, el resultado es una imagen con deformación geométrica dependiente de la fila (\textit{skew}, efecto de \enquote{cizalla}): líneas rectas del mundo real aparecen inclinadas, y el desplazamiento entre la parte superior e inferior de la imagen no corresponde a ninguna transformación geométrica simple.
+
+Esta deformación es especialmente perjudicial para este proyecto porque el pipeline de geolocalización visual (\autoref{cap:geolocalizacion-visual}) depende de estimar una homografía —una transformación geométrica global y consistente— entre la imagen del dron y el parche satelital. Una imagen con \textit{skew} de obturador rodante no es geométricamente consistente con una homografía única, lo que degrada tanto el número de correspondencias válidas que encuentra LoFTR como la precisión de la posición proyectada. Un sensor de obturador global, en cambio, expone todos los píxeles del fotograma en el mismo instante, por lo que la imagen resultante es geométricamente consistente con independencia del movimiento del dron durante la captura.
+
+Se dispone de una cámara de cada tipo (Svpro AR0234, obturador global, la usada en el proyecto; y una cámara adicional de obturador rodante) para poder comparar directamente el efecto sobre las imágenes capturadas en vuelo (\autoref{fig:frame-rolling} y \autoref{fig:frame-global}). Ambos fotogramas se capturaron con la cámara montada sobre la misma placa antivibración de fibra de carbono, de forma que la comparación aísla el efecto del tipo de obturador y no una diferencia en el aislamiento mecánico. En el fotograma de obturador rodante se aprecia una ondulación característica en la imagen, ausente en el de obturador global.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth,height=4.5cm,keepaspectratio]{frame_camara_rolling.png}
+\caption{Fotograma con obturador rodante: se aprecia la imagen ondulada por el efecto de \textit{skew}.}
+\label{fig:frame-rolling}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth,height=4.5cm,keepaspectratio]{frame_camara_global.png}
+\caption{Fotograma con obturador global (Svpro AR0234): sin deformación apreciable pese a las vibraciones.}
+\label{fig:frame-global}
+\end{minipage}
+\end{figure}
+
+\section{Conexiones eléctricas y de datos}
+\label{sec:conexiones-electricas-datos}
+
+Los conectores relevantes de la placa controladora (stack H743 6S, basada en el microcontrolador STM32H743) usados en este proyecto, ya representados en el esquema eléctrico de la \autoref{fig:alimentacion-dron}, son:
+
+\begin{itemize}
+\item \textbf{Alimentación auxiliar}: se soldó un cable directamente a los pines de entrada de batería de la FC (\texttt{BAT}/\texttt{GND}) para alimentar el BEC ajustable desde la tensión bruta de la batería, en vez de depender de una salida ya regulada de la propia FC. Esto da una línea de alimentación independiente para la Raspberry Pi, la cámara y el resto de electrónica auxiliar.
+\item \textbf{Telemetría hacia la Raspberry Pi}: se cablea el puerto serie \texttt{SERIAL2} de la FC (pines \texttt{T2}/\texttt{R2}) a los pines GPIO14 (TXD, pin físico 8) y GPIO15 (RXD, pin físico 10) de la Raspberry Pi, cruzando TX y RX entre ambos dispositivos (T2$\to$RXD, R2$\to$TXD), más una referencia de masa común (GND).
+\item \textbf{GPS y brújula}: el módulo GPS M10 se conecta al puerto etiquetado \texttt{GPS} de la FC (T1/R1 para UART, SDA/SCL para la brújula por I2C).
+\item \textbf{Receptor de radiocontrol}: el receptor FlySky FS-i6X se conecta al puerto de recepción de la FC (protocolo iBUS), lo que permite tomar el control manual del dron mediante la emisora en cualquier momento de la misión (\autoref{sec:controlador-sensores}).
+\end{itemize}
+
+\section{Computadora de borde y comunicaciones}
+\label{sec:hardware-raspberry-comunicaciones}
+
+La Raspberry Pi actúa como computadora de borde. En la configuración actual se encarga de ejecutar el programa de captura, guardar los fotogramas y registrar la telemetría disponible. También se conecta un dongle LTE para mantener comunicación con el ordenador de tierra. Sobre esta comunicación se utiliza Tailscale (\autoref{sec:acceso-remoto}), lo que permite acceder al sistema de forma remota mediante una red privada virtual.
+
+La Raspberry Pi empleada es una \textbf{Raspberry Pi 3B+}. Se trata de un modelo ya antiguo y limitado para las exigencias del pipeline de geolocalización visual completo: no dispone de aceleración por GPU ni de memoria suficiente para cargar simultáneamente los modelos DINOv3-vitl16 y LoFTR (\autoref{sec:analisis-rendimiento}). En este proyecto se ha usado únicamente para las tareas que sí puede asumir con margen —captura de imágenes, registro de telemetría y comunicaciones—, dejando explícitamente fuera de su alcance la ejecución a bordo del pipeline visual completo, que se evalúa en un ordenador externo con GPU (\autoref{sec:decisiones-diseno}).
+
+\section{Pruebas de integración hardware}
+\label{sec:pruebas-hardware}
+
+La \autoref{tab:pruebas-hardware} recoge las pruebas básicas realizadas antes de los vuelos de captura, para validar la integración física de la plataforma.
+
+\begin{table}[htbp]
+\centering
+\caption{Pruebas básicas de integración hardware.}
+\label{tab:pruebas-hardware}
+\begin{tabularx}{\textwidth}{p{0.22\textwidth}Xp{0.22\textwidth}}
+\toprule
+\textbf{Prueba} & \textbf{Criterio de aceptación} & \textbf{Resultado obtenido} \\
+\midrule
+Continuidad eléctrica & No existen cortocircuitos entre alimentación y masa. & No se detectaron cortocircuitos. \\
+Regulación del BEC & La tensión de salida coincide con la requerida por la electrónica auxiliar. & El BEC entregaba correctamente \SI{5}{\volt}. \\
+Orden de motores & Cada motor responde al canal correcto y gira en el sentido esperado. & El orden y sentido de giro de los cuatro motores era correcto. \\
+Lectura de GPS y brújula & La estación de tierra recibe posición y rumbo coherentes. & Cumplido, tras corregir la posición y orientación del GPS (\autoref{sec:problema-gps-proximidad}, \autoref{sec:problema-brujula-invertida}). \\
+Captura de cámara & La Raspberry Pi detecta la cámara y guarda imágenes sin cortes. & Cumplido: 142 fotogramas capturados de forma continua en el vuelo de validación (\autoref{sec:zona-condiciones-vuelo}). \\
+Vibraciones & Las imágenes capturadas no presentan desenfoque o deformaciones severas. & No se aprecian deformaciones ni desenfoque relevantes, gracias al montaje antivibración (\autoref{sec:camara-montaje}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Problemas encontrados y soluciones}
+\label{sec:problemas-hardware}
+
+Esta sección documenta, con el formato problema\,$\rightarrow$\,diagnóstico\,$\rightarrow$\,solución, los principales incidentes de integración hardware surgidos durante el proyecto.
+
+\subsection{Pérdida del \textit{firmware}/\textit{bootloader} de la placa de vuelo}
+\label{sec:problema-stlink}
+
+\textbf{Problema.} Al instalar ArduPilot desde la aplicación de Betaflight (subiendo directamente el archivo \texttt{.hex} del \textit{firmware}), el proceso de flasheo se interrumpió a mitad de camino y, a partir de ese momento, la placa dejó de responder por completo: ya no era detectada como dispositivo USB por el ordenador ni aparecía ningún puerto serie nuevo al conectarla, sin ningún mensaje de error claro que explicara qué había fallado.
+
+\textbf{Diagnóstico.} El flasheo interrumpido a mitad de escritura dejó la memoria flash del microcontrolador STM32H743 (en particular, el \textit{bootloader}) en un estado corrupto o vacío, sin programa válido que ejecutar al arrancar. Sin bootloader activo la placa no puede enumerarse como dispositivo USB ni comunicarse con Mission Planner, lo que normalmente obligaría a sustituir la placa completa; sin embargo, el microcontrolador seguía físicamente intacto y accesible mediante su interfaz de depuración SWD, independiente del USB y del bootloader.
+
+\textbf{Solución.} Se reprogramó el microcontrolador directamente por SWD con un programador \textbf{ST-Link V2}, evitando así el USB/bootloader de la propia placa y comprando únicamente el programador (mucho más barato que sustituir la FC completa). El procedimiento seguido fue:
+
+\begin{enumerate}
+\item Conexión del ST-Link V2 (\autoref{fig:swd-pads}) a cuatro pads sin serigrafiar situados junto al chip STM32H743, entre los conectores de motores \texttt{M6}/\texttt{M7}/\texttt{M8}, etiquetados en la serigrafía de la placa simplemente como \texttt{C}, \texttt{D}, \texttt{G} y \texttt{3} (\texttt{C}=SWCLK, \texttt{D}=SWDIO, \texttt{G}=GND; el pad \texttt{3}, presumiblemente 3V3, no se llegó a conectar por no ser necesario con la placa ya alimentada). Estos pads son extremadamente pequeños y fáciles de dañar: uno de ellos se desprendió de la placa al desoldar el cable del ST-Link tras terminar el procedimiento, aunque sin afectar al resultado ya obtenido.
+\item Descarga del firmware de ArduCopter precompilado para el target oficial \texttt{DAKEFPVH743} del servidor de \textit{firmware} de ArduPilot, en formato \texttt{arducopter\_with\_bl.hex} (incluye el \textit{bootloader}, por lo que no hace falta flashearlo aparte).
+\item Programación con \textbf{STM32CubeProgrammer} en modo automático: con el archivo \texttt{.hex} cargado (el campo de dirección de inicio se deja vacío, ya que el formato HEX incluye las direcciones de memoria embebidas, a diferencia de un \texttt{.bin}), se marcan las opciones \textit{Full chip erase}, \textit{Download file} y \textit{Verify programming}, y se ejecuta \textit{Start Programming}.
+\item Verificación: tras desconectar el ST-Link y conectar la placa solo por USB, apareció un puerto COM nuevo en el sistema —señal de que el \textit{bootloader} de ArduPilot estaba de nuevo activo— y Mission Planner pudo conectar a \SI{115200}{baud} y mostrar telemetría en vivo del giroscopio.
+\end{enumerate}
+
+Tras el flasheo fue necesario repetir la configuración inicial del controlador desde cero (el chip se había borrado por completo): calibración de acelerómetro, calibración de brújula, configuración del tipo de \textit{frame} (número de motores y geometría) y calibración de radio.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\textwidth]{soldadura_stlink.png}
+\caption{ST-Link V2 conectado a los pads de depuración SWD de la FC, con los cables soldados junto a los conectores de motores M6/M7/M8.}
+\label{fig:swd-pads}
+\end{figure}
+
+\subsection{Pérdida de señal GPS por proximidad a otros componentes}
+\label{sec:problema-gps-proximidad}
+
+\textbf{Problema.} Con el módulo GPS M10 anclado directamente sobre el chasis, cerca de la FC y del resto de la electrónica, el número de satélites detectados era insuficiente para obtener una posición fiable.
+
+\textbf{Diagnóstico.} La proximidad de la antena GPS a la FC, los cables de potencia y el resto de electrónica introduce interferencia electromagnética que degrada la recepción de la señal GNSS, y además el propio chasis y los componentes montados a su alrededor reducen la porción de cielo visible para la antena.
+
+\textbf{Solución.} Se diseñó e imprimió en 3D un mástil que eleva el módulo GPS por encima del resto de la electrónica (\autoref{sec:modelos-3d}). Tras este cambio, el número de satélites detectados fue suficiente y estable, sin más incidencias de pérdida de posición.
+
+\subsection{Brújula invertida tras montar el mástil del GPS}
+\label{sec:problema-brujula-invertida}
+
+\textbf{Problema.} Al imprimir e instalar el mástil 3D que eleva el módulo GPS/brújula por encima del resto de la electrónica (\autoref{sec:problema-gps-proximidad}), se montó con una orientación equivocada sobre el chasis, de forma que el módulo quedó mirando hacia atrás en vez de hacia delante. En el primer vuelo de prueba tras ese montaje, el dron entró en lo que se conoce como \textit{toilet bowling} (el dron gira en círculos cada vez más amplios en vez de mantenerse estable), un síntoma característico de que el rumbo que reporta la brújula no coincide con la orientación real de la aeronave.
+
+\textbf{Diagnóstico.} El firmware de ArduPilot asume una orientación concreta del módulo de brújula respecto al cuerpo del dron; al estar montada girada 180° respecto a esa orientación esperada, el rumbo magnético que reportaba no se correspondía con hacia dónde apuntaba realmente el dron, lo que confunde al controlador de estabilización durante el vuelo.
+
+\textbf{Solución.} Se corrigió la orientación física del módulo GPS/brújula en el mástil para que coincidiera con la esperada por el firmware. El incidente ocurrió a poca altura, por lo que el único daño fue en las hélices (que quedaron ligeramente picadas y se sustituyeron); tras la corrección de orientación no se repitió ningún problema de sensores de la FC durante el resto de las pruebas.
+
+No se han presentado más incidencias de sensores de la FC además de la brújula invertida.
+
+\subsection{Calibración de la cámara}
+\label{sec:referencia-problema-calibracion}
+
+La calibración de los parámetros intrínsecos y de distorsión de la cámara se investigó como posible mejora de precisión y finalmente se descartó tras comprobarse empíricamente que no mejora el resultado; el detalle completo de este experimento se documenta junto al resto de decisiones sobre el pipeline visual, en la \autoref{sec:estado-alternativas-no-adoptadas}.
+
+% ---------------------------------------------------------------------

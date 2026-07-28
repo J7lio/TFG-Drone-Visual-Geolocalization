@@ -1,0 +1,89 @@
+% ---------------------------------------------------------------------
+% Planificación y presupuesto
+% ---------------------------------------------------------------------
+
+\chapter{Planificación y presupuesto}
+\label{cap:planificacion-presupuesto}
+
+\begin{Resumen}
+Este capítulo describe la planificación temporal del proyecto por fases, los principales riesgos técnicos identificados y las medidas adoptadas para mitigarlos, y el presupuesto de los componentes empleados en la plataforma.
+\end{Resumen}
+
+\section{Planificación del proyecto}
+\label{sec:planificacion-proyecto}
+
+El proyecto puede dividirse en las siguientes fases de trabajo, distribuidas en el tiempo como recoge la \autoref{fig:gantt-proyecto}:
+
+\begin{enumerate}
+\item \textbf{Análisis inicial}: definición del alcance, selección de componentes y estudio de alternativas de navegación visual.
+\item \textbf{Montaje hardware}: ensamblaje del chasis, motores, controlador, alimentación, GPS, cámara y Raspberry Pi.
+\item \textbf{Configuración de vuelo}: calibración del controlador, pruebas de motores, parámetros de seguridad y validación en tierra.
+\item \textbf{Integración software}: configuración de MAVProxy, Tailscale, \texttt{tmux}, captura de imágenes y registro de telemetría.
+\item \textbf{Captura experimental}: vuelos de prueba, generación de datasets y revisión de la calidad de los datos.
+\item \textbf{Evaluación CVGL}: creación de mapa base, galería satelital, recuperación global, matching local y análisis de error.
+\item \textbf{Redacción}: documentación de diseño, resultados, conclusiones y líneas futuras.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{gantt_proyecto.png}
+\caption{Planificación temporal del proyecto, desde la compra de componentes hasta la entrega de la memoria.}
+\label{fig:gantt-proyecto}
+\end{figure}
+
+\section{Riesgos y medidas de mitigación}
+\label{sec:riesgos-mitigacion}
+
+La \autoref{tab:riesgos} resume los riesgos técnicos principales y las medidas previstas para reducir su impacto.
+
+\begin{table}[htbp]
+\centering
+\caption{Riesgos técnicos del proyecto.}
+\label{tab:riesgos}
+\begin{tabularx}{\textwidth}{p{0.26\textwidth}X X}
+\toprule
+\textbf{Riesgo} & \textbf{Impacto} & \textbf{Mitigación} \\
+\midrule
+Vibraciones en cámara & Imágenes borrosas y peor matching visual. & Montaje antivibración, revisión de hélices y vuelos de prueba. \\
+Pérdida de conexión remota & Interrupción de monitorización. & Uso de \texttt{tmux} y registro local en la Raspberry Pi. \\
+Sobrecarga computacional & Imposibilidad de CVGL en tiempo real a bordo. & Evaluación fuera de bordo y propuesta de optimización futura. \\
+Fallo de telemetría & Datos incompletos para evaluación. & Registro local, pruebas de MAVLink en tierra y comprobación previa al vuelo. \\
+Autonomía insuficiente & Menor tiempo de captura. & Vuelos cortos e incrementales, control de carga y revisión de peso. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section{Presupuesto}
+\label{sec:presupuesto}
+
+La \autoref{tab:presupuesto} recoge el presupuesto de los componentes de la plataforma. La Raspberry Pi, el dongle LTE, la emisora con su receptor FlySky FS-i6X y el material auxiliar ya se tenían de antes de empezar el proyecto (no se compraron para él), por lo que su coste se estima a precio aproximado de reposición en vez de a partir de un ticket de compra real.
+
+\begin{longtable}{p{0.34\textwidth}p{0.12\textwidth}p{0.18\textwidth}p{0.18\textwidth}}
+\caption{Presupuesto inicial del sistema.}\label{tab:presupuesto}\\
+\toprule
+\textbf{Elemento} & \textbf{Cantidad} & \textbf{Coste unitario} & \textbf{Subtotal} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Elemento} & \textbf{Cantidad} & \textbf{Coste unitario} & \textbf{Subtotal} \\
+\midrule
+\endhead
+Chasis F450 con tren de aterrizaje & 1 & 16.29€ & 16.29€ \\
+Motores brushless 2212 920KV & 4 & 6.50€ & 26.00€ \\
+Hélices 1045 CW/CCW & 1 lote de 10 & 6.67€ & 6.67€ \\
+Batería LiPo 4S 5200 mAh 60C & 1 & 31.19€ & 31.19€ \\
+Stack H743 6S con ESC 55 A & 1 & 51.69€ & 51.69€ \\
+Módulo GPS M10 con brújula & 1 & 14.28€ & 14.28€ \\
+BEC ajustable & 1 & 4.39€ & 4.39€ \\
+Placa antivibración & 1 & 4.99€ & 4.99€ \\
+Cámara USB global shutter & 1 & 65.99€ & 65.99€ \\
+Raspberry Pi (ya disponible, coste aprox. de reposición) & 1 & 60.00€ & 60.00€ \\
+Dongle LTE (ya disponible, coste aprox. de reposición) & 1 & 20.00€ & 20.00€ \\
+Emisora y receptor FlySky FS-i6X (ya disponible, coste aprox. de reposición) & 1 & 45.00€ & 45.00€ \\
+Material auxiliar, conectores y fijaciones (coste aprox.) & 1 lote & 10.00€ & 10.00€ \\
+\midrule
+\textbf{Total} & & & \textbf{356.49€} \\
+\bottomrule
+\end{longtable}
+
+% ---------------------------------------------------------------------
