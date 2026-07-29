@@ -14,8 +14,8 @@ gallery (zero-shot, sin entrenar ninguna red).
 Requisitos:
     pip install torch torchvision pillow numpy scikit-learn
     git clone --depth 1 https://github.com/facebookresearch/dinov3 dinov3_repo
-    Pesos .pth en dinov3_weights/ (ver README del proyecto), ambas como
-    carpetas hermanas de este repositorio.
+    Pesos .pth en dinov3_weights/ (ver README del proyecto). Ambas carpetas
+    van en la raíz del repositorio, junto a codigos_final/ y memoria_tfg/.
 """
 import os
 

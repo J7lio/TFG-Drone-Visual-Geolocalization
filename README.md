@@ -89,10 +89,12 @@ del entorno de análisis: `pymavlink` (además de `opencv-python`, ya incluido).
 
 No se incluyen en este repositorio ni el repo de DINOv3 ni sus pesos, por
 tamaño y por estar los pesos bajo licencia de acceso restringido de Meta.
-`codigos_final/principal/descriptor_produccion.py` espera encontrarlos como
-carpetas hermanas de este repositorio:
+`codigos_final/principal/descriptor_produccion.py` espera encontrarlos en la
+**raíz de este repositorio**, como hermanas de `codigos_dron/`, `codigos_final/`
+y `memoria_tfg/` (ver el árbol de la sección anterior) — no fuera de esta carpeta:
 
 ```bash
+# Desde la raíz del repositorio clonado:
 git clone --depth 1 https://github.com/facebookresearch/dinov3 dinov3_repo
 ```
 
@@ -100,7 +102,7 @@ Los pesos (`dinov3_vitb16_pretrain_lvd1689m-*.pth` y
 `dinov3_vitl16_pretrain_sat493m-*.pth`, esta última es la variante de
 producción) se solicitan y descargan desde la página oficial de Meta:
 <https://ai.meta.com/resources/models-and-libraries/dinov3-downloads/>.
-Colócalos en una carpeta `dinov3_weights/` también hermana de este repositorio.
+Colócalos en una carpeta `dinov3_weights/`, también en la raíz del repositorio.
 
 ### 3. Reproducir el pipeline CVGL
 
